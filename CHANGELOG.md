@@ -7,7 +7,7 @@ with the release date; the same list drives the in-app **What's New** panel
 ## [1.5.1] · 2026-09-14
 
 ### Fixed
-- New accounts now start empty. A leftover developer sample ("Locomotive & Train Collection") was being auto-added to every new account on first load, in both the signed-in and local paths. All three auto-seed calls were removed; the seed function is left defined but is no longer called anywhere. Accounts that already received the sample collection keep it until it is deleted by hand, and it will not come back once this build is live.
+- Fixed a setup issue where some accounts were given a sample "Locomotive & Train Collection" the user did not add. Cause was leftover developer scaffolding (seedTrainCollection) auto-run on first load in both the signed-in and local paths. All three auto-seed calls and the seed function itself have been removed, so new accounts start empty. A one-time owner-only admin function then cleared the sample collection from the accounts that had received it (matching only items on the seed date, so real user-created collections were never affected); that admin function has since been removed too.
 
 ## [1.5.0] · 2026-09-14
 
