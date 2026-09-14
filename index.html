@@ -2158,8 +2158,8 @@ function disableNotifications(){ notifPrefs.enabled=false; _saveNotifPrefs(); _r
 function setNotifPref(key, val){ notifPrefs[key]=!!val; _saveNotifPrefs(); }
 // ── FCM remote push (paste the VAPID key below to switch on; empty = local/in-app only) ──
 const FCM_VAPID_KEY = 'BIUl_zIsqB8VRUHQljrk2_QvI03idyKnXRWki9VEgOmJp3s9IjfJKS3gR5pYCQmJaYjRutDOxpswR_nV2wjpb-E';   // Firebase console → Project settings → Cloud Messaging → Web Push certificates → key pair
-// Stripe publishable key (PUBLIC — safe in client). TEST mode; swap to pk_live_ at launch.
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51UCrfL3SowKeLXaYURWsNoChOKtFb3b5zXrzvbskxcpOEF5y94fCxJNsaUsEi04U8ndTuXztGColgtCsxhmAThfm00x23u8hNN';
+// Stripe publishable key (PUBLIC — safe in client). LIVE mode (Giganto Studio / Hoardrapp acct_1UCrfL3SowKeLXaY).
+const STRIPE_PUBLISHABLE_KEY = 'pk_live_51UCrfL3SowKeLXaY4fz38jGsYBQpxIF6Ns7J3GTl12BrxYmGLFwahU4J7fli5HNbc54Rhaeesia4M7IJsPdoNYpP00S776aPSS';
 let msgSvc = null;
 function _fcmReady(){ return !!FCM_VAPID_KEY && typeof firebase!=='undefined' && firebase.messaging && firebaseMode && currentUser; }
 async function _registerPush(){
