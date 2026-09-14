@@ -4,6 +4,11 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.5.1] · 2026-09-14
+
+### Fixed
+- New accounts now start empty. A leftover developer sample ("Locomotive & Train Collection") was being auto-added to every new account on first load, in both the signed-in and local paths. All three auto-seed calls were removed; the seed function is left defined but is no longer called anywhere. Accounts that already received the sample collection keep it until it is deleted by hand, and it will not come back once this build is live.
+
 ## [1.5.0] · 2026-09-14
 
 ### Changed
