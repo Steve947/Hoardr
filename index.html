@@ -218,6 +218,15 @@ label.btn.btn-sm{font-size:12px}
 .tab-btn.active{color:var(--gold2);border-bottom-color:var(--gold)}
 .tab-content{display:none}
 .tab-content.active{display:block}
+/* Collapsible sections for the add/edit item form (replaces the old tabs) */
+.af-lead{margin-bottom:16px}
+.af-sect{border:1px solid var(--border);border-radius:10px;margin:12px 0;overflow:hidden}
+.af-sect-h{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px;background:var(--surface2);border:none;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text);text-align:left}
+.af-sect-h:hover{background:var(--border)}
+.af-chev{color:var(--text3);transition:transform .15s;font-size:12px}
+.af-sect-b{display:none;padding:14px}
+.af-sect.open>.af-sect-b{display:block}
+.af-sect.open>.af-sect-h .af-chev{transform:rotate(180deg)}
 .field-row{margin-bottom:14px}
 .field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
@@ -819,16 +828,21 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
       <button class="btn btn-outline btn-sm" onclick="closePanel('itemOverlay')">✕ Close</button>
     </div>
     <div class="panel-body">
-      <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab(event,'tabCore')">Core</button>
-        <button class="tab-btn" onclick="switchTab(event,'tabAcq')">Acquisition</button>
-        <button class="tab-btn" onclick="switchTab(event,'tabDesc')">Description</button>
-        <button class="tab-btn" onclick="switchTab(event,'tabPhotos')">Photos</button>
-        <button class="tab-btn" onclick="switchTab(event,'tabExtra')">Extra Fields</button>
-      </div>
       <input type="hidden" id="editId">
 
-      <div class="tab-content active" id="tabCore">
+      <div class="af-lead">
+        <div class="section-heading">📸 Photo</div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:12px" id="photoUploadNote">Add a photo first and the AI can read it and fill in the details for you. The first photo becomes the thumbnail.</p>
+        <div class="photo-grid" id="photoGrid">
+          <button class="photo-add" onclick="document.getElementById('photoUpload').click()">
+            <span class="add-icon">＋</span><span>Add Photo</span>
+          </button>
+        </div>
+        <input type="file" id="photoUpload" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(event)">
+        <button type="button" id="aiFillBtn" class="btn btn-gold btn-sm" style="display:none;margin-top:12px;width:100%;justify-content:center" onclick="aiFillFromPhoto()">✨ AI fill from photo</button>
+      </div>
+
+
         <div class="field-row"><label>Item Name *</label><input type="text" id="fName" placeholder="e.g. 1950s Rodeo Belt Buckle" oninput="autoFillShortDesc()"></div>
         <div class="field-row-2">
           <div><label>Category *</label>
@@ -850,11 +864,22 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
               <div class="icon-picker" id="fCategoryEmojiPicker" style="max-height:150px;overflow:auto"></div>
             </div>
           </div>
-          <div><label>Group / Collection</label>
-            <select id="fGroup"><option value="">— None —</option></select>
+          <div><label>Group / Collection <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <select id="fGroup" style="flex:1"><option value="">— None —</option></select>
+              <button type="button" class="btn btn-outline btn-sm" style="white-space:nowrap" onclick="newGroupFromItem()">＋ New</button>
+            </div>
+            <div style="font-size:10.5px;color:var(--text3);margin-top:4px">You can save without one. Groups just help you organise items.</div>
           </div>
         </div>
-        <div class="field-row-2">
+
+        <div class="field-row"><label>Short Description</label><input type="text" id="fShortDesc" placeholder="One-line summary"></div>
+
+      <div class="af-sect" id="afsecDetails">
+        <button type="button" class="af-sect-h" onclick="toggleAfSect('afsecDetails')"><span>Condition, value &amp; measurements</span><span class="af-chev">▾</span></button>
+        <div class="af-sect-b">
+        <p style="font-size:11.5px;color:var(--text3);margin:-2px 0 10px">Optional. The AI can fill much of this from the photo.</p>
+<div class="field-row-2">
           <div><label>Quantity / pieces</label>
             <select id="fQuantity"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option><option value="32">32</option><option value="33">33</option><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option><option value="51">51</option><option value="52">52</option><option value="53">53</option><option value="54">54</option><option value="55">55</option><option value="56">56</option><option value="57">57</option><option value="58">58</option><option value="59">59</option><option value="60">60</option><option value="61">61</option><option value="62">62</option><option value="63">63</option><option value="64">64</option><option value="65">65</option><option value="66">66</option><option value="67">67</option><option value="68">68</option><option value="69">69</option><option value="70">70</option><option value="71">71</option><option value="72">72</option><option value="73">73</option><option value="74">74</option><option value="75">75</option><option value="76">76</option><option value="77">77</option><option value="78">78</option><option value="79">79</option><option value="80">80</option><option value="81">81</option><option value="82">82</option><option value="83">83</option><option value="84">84</option><option value="85">85</option><option value="86">86</option><option value="87">87</option><option value="88">88</option><option value="89">89</option><option value="90">90</option><option value="91">91</option><option value="92">92</option><option value="93">93</option><option value="94">94</option><option value="95">95</option><option value="96">96</option><option value="97">97</option><option value="98">98</option><option value="99">99</option><option value="100">100</option></select>
             <div style="font-size:10.5px;color:var(--text3);margin-top:4px">How many physical pieces this entry represents (e.g. a folder page with several stickers). Totals add these up.</div>
@@ -915,9 +940,23 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <div></div>
         </div>
         <div id="catSpecificFields"></div>
+        </div>
       </div>
 
-      <div class="tab-content" id="tabAcq">
+      <div class="af-sect" id="afsecNotes">
+        <button type="button" class="af-sect-h" onclick="toggleAfSect('afsecNotes')"><span>Notes &amp; history</span><span class="af-chev">▾</span></button>
+        <div class="af-sect-b">
+<div class="field-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:0"><span>Full Notes</span><button type="button" id="aiTidyBtn" class="btn btn-outline btn-sm" style="display:none" onclick="aiTidyNotes()">✨ AI Tidy Up</button></label><textarea id="fNotes" style="min-height:120px" placeholder="Detailed notes…"></textarea></div>
+        <div class="field-row"><label>Historical / Background</label><textarea id="fHistory" style="min-height:90px" placeholder="Historical context, era, manufacturer info…"></textarea></div>
+        <div class="field-row"><label>Tags (comma-separated)</label><input type="text" id="fTags" placeholder="e.g. western, silver, 1950s, rare"></div>
+        </div>
+      </div>
+
+      <div class="af-sect" id="afsecAcq">
+        <button type="button" class="af-sect-h" onclick="toggleAfSect('afsecAcq')"><span>Acquisition &amp; provenance</span><span class="af-chev">▾</span></button>
+        <div class="af-sect-b">
+        <p style="font-size:11.5px;color:var(--text3);margin:-2px 0 10px">Optional. Where and when you got it, price, seller.</p>
+
         <div class="field-row-2">
           <div><label>Date Obtained</label><input type="date" id="fObtainedDate"></div>
           <div><label>Obtained From</label><input type="text" id="fObtainedFrom" placeholder="e.g. Auction, Estate Sale"></div>
@@ -929,32 +968,18 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
         <div class="field-row"><label>Location / Provenance</label><input type="text" id="fProvenance" placeholder="Where is it from?"></div>
         <div class="field-row"><label>Certificate / Reference Number</label><input type="text" id="fCertRef" placeholder="e.g. cert #, catalogue number"></div>
         <div class="field-row"><label>Insurance / Storage Notes</label><textarea id="fInsurance" placeholder="Insurance details, storage location…"></textarea></div>
-      </div>
-
-      <div class="tab-content" id="tabDesc">
-        <div class="field-row"><label>Short Description</label><input type="text" id="fShortDesc" placeholder="One-line summary"></div>
-        <div class="field-row"><label style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:0"><span>Full Notes</span><button type="button" id="aiTidyBtn" class="btn btn-outline btn-sm" style="display:none" onclick="aiTidyNotes()">✨ AI Tidy Up</button></label><textarea id="fNotes" style="min-height:120px" placeholder="Detailed notes…"></textarea></div>
-        <div class="field-row"><label>Historical / Background</label><textarea id="fHistory" style="min-height:90px" placeholder="Historical context, era, manufacturer info…"></textarea></div>
-        <div class="field-row"><label>Tags (comma-separated)</label><input type="text" id="fTags" placeholder="e.g. western, silver, 1950s, rare"></div>
-      </div>
-
-      <div class="tab-content" id="tabPhotos">
-        <div class="section-heading">📸 Item Photos</div>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:12px" id="photoUploadNote">Add photos to document your item. First photo = thumbnail.</p>
-        <button type="button" id="aiFillBtn" class="btn btn-outline btn-sm" style="display:none;margin-bottom:12px" onclick="aiFillFromPhoto()">✨ AI fill from photo</button>
-        <div class="photo-grid" id="photoGrid">
-          <button class="photo-add" onclick="document.getElementById('photoUpload').click()">
-            <span class="add-icon">＋</span><span>Add Photo</span>
-          </button>
         </div>
-        <input type="file" id="photoUpload" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(event)">
       </div>
 
-      <div class="tab-content" id="tabExtra">
+      <div class="af-sect" id="afsecExtra">
+        <button type="button" class="af-sect-h" onclick="toggleAfSect('afsecExtra')"><span>Custom fields</span><span class="af-chev">▾</span></button>
+        <div class="af-sect-b">
+
         <div class="section-heading">🔧 Custom Fields</div>
         <p style="font-size:12px;color:var(--text3);margin-bottom:14px">Add any additional fields relevant to this item.</p>
         <div id="extraFieldsList"></div>
         <button class="btn btn-outline btn-sm" onclick="addExtraField()">＋ Add Custom Field</button>
+        </div>
       </div>
     </div>
     <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--surface)">
@@ -1647,14 +1672,46 @@ function _valueSparkline(item){
 
 // ── AI fill from photo (vision identify → review → apply; owner-only alpha) ──
 let _aiFill=null, _aiFillRows=[], _pendingAiAfterPhoto=false;
+// Downscale a base64 image before sending to the AI function. Phone/tablet
+// photos (esp. iPad) are several MB; sent full size they overflow the callable
+// request limit and the AI returns "image too large". We shrink the longest
+// edge and re-encode as JPEG. Always resolves; on any failure it returns the
+// original bytes so this can never make things worse.
+function _downscaleImageB64(b64, mime, maxEdge, quality){
+  return new Promise((resolve)=>{
+    try{
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+          if(!w||!h){ resolve({b64:b64, mime:mime}); return; }
+          const scale=Math.min(1, maxEdge/Math.max(w,h));
+          const nw=Math.max(1,Math.round(w*scale)), nh=Math.max(1,Math.round(h*scale));
+          const c=document.createElement('canvas'); c.width=nw; c.height=nh;
+          c.getContext('2d').drawImage(img,0,0,nw,nh);
+          const durl=c.toDataURL('image/jpeg', quality||0.82);
+          const i=durl.indexOf(',');
+          if(i<0){ resolve({b64:b64, mime:mime}); return; }
+          resolve({b64:durl.slice(i+1), mime:'image/jpeg'});
+        }catch(e){ resolve({b64:b64, mime:mime}); }
+      };
+      img.onerror=()=>resolve({b64:b64, mime:mime});
+      img.src='data:'+(mime||'image/jpeg')+';base64,'+b64;
+    }catch(e){ resolve({b64:b64, mime:mime}); }
+  });
+}
 async function _firstPhotoBase64(){
   const ph=(editPhotoData||[]).find(x=>x&&x.url); if(!ph) return null;
   let v=ph.url; if(typeof v!=='string') v=photoFull(v);
   if(!v) return null;
-  if(v.indexOf('data:')===0){ const i=v.indexOf(','); return {b64:v.slice(i+1), mime:(v.slice(5,v.indexOf(';'))||'image/jpeg')}; }
-  const blob=await fetch(v,{cache:'force-cache'}).then(r=>r.blob());
-  const dataUrl=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.onerror=rej;fr.readAsDataURL(blob);});
-  const i=dataUrl.indexOf(','); return {b64:dataUrl.slice(i+1), mime:blob.type||'image/jpeg'};
+  let raw;
+  if(v.indexOf('data:')===0){ const i=v.indexOf(','); raw={b64:v.slice(i+1), mime:(v.slice(5,v.indexOf(';'))||'image/jpeg')}; }
+  else {
+    const blob=await fetch(v,{cache:'force-cache'}).then(r=>r.blob());
+    const dataUrl=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.onerror=rej;fr.readAsDataURL(blob);});
+    const i=dataUrl.indexOf(','); raw={b64:dataUrl.slice(i+1), mime:blob.type||'image/jpeg'};
+  }
+  return await _downscaleImageB64(raw.b64, raw.mime, 1536, 0.82);
 }
 async function aiFillFromPhoto(){
   if(!isAiAlpha()){ showToast('AI is in limited testing right now','🔒'); return; }
@@ -1701,9 +1758,13 @@ function aiFillApply(){
   let n=0; const checks=Array.from(document.querySelectorAll('#aiFillBody [data-aifill]'));
   checks.forEach(cb=>{ if(!cb.checked)return; const r=_aiFillRows[+cb.dataset.aifill]; if(!r||r.key!=='__CAT__')return;
     const sel=document.getElementById('fCategory'); if(sel){ sel.value=r.value; if(typeof updateCatFields==='function') updateCatFields(); n++; } });
+  let filledNotes=false;
   checks.forEach(cb=>{ if(!cb.checked)return; const r=_aiFillRows[+cb.dataset.aifill]; if(!r||r.key==='__CAT__')return;
     const el=document.getElementById(r.key); if(!el)return;
-    if(r.key==='fNotes' && el.value.trim()){ el.value=el.value.trim()+'\n'+r.value; } else { el.value=r.value; } n++; });
+    if(r.key==='fNotes' && el.value.trim()){ el.value=el.value.trim()+'\n'+r.value; } else { el.value=r.value; } n++;
+    if(r.key==='fNotes') filledNotes=true; });
+  // Reveal the sections the AI just wrote into so nothing is applied out of sight
+  if(n){ openAfSect('afsecDetails'); if(filledNotes) openAfSect('afsecNotes'); }
   showToast(n?('Applied '+n+' field'+(n>1?'s':'')+' — review & save'):'Nothing selected','✨');
   closePanel('aiFillOverlay');
 }
@@ -1759,6 +1820,7 @@ async function _siFromText(text,fname){
 }
 async function _siFromImage(b64,mime,fname){
   showToast('AI reading the image…','✨');
+  const s=await _downscaleImageB64(b64, mime, 1536, 0.82); b64=s.b64; mime=s.mime;
   try{ const resp=await fnSvc.httpsCallable('aiAssist')({mode:'parse_items', imageBase64:b64, mimeType:mime, coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); _siItemsResult(resp.data&&resp.data.result, fname); }catch(err){ _siErr(err); }
 }
 async function _siFromImages(b64s,fname){
@@ -1876,11 +1938,16 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.4.3';             // semantic version — quote in bug reports
-const APP_VERSION_DATE = '2026-09-13';   // release date of this build
+const APP_VERSION = '1.5.0';             // semantic version — quote in bug reports
+const APP_VERSION_DATE = '2026-09-14';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.5.0', date:'14 Sep 2026', changes:[
+    'Adding or editing an item is simpler. Photo comes first, so you can snap a picture and let AI fill in the details, then just the essentials (name, category, group) are shown. Everything else sits in tidy sections you open only if you need them.',
+    'AI photo reading now works on large iPad and phone photos. Big pictures are shrunk automatically before the AI reads them, so it no longer refuses a photo for being too large.',
+    'Easier to create a group while adding an item, with a New button right next to the group picker. Groups are clearly optional, so a new item is quick to save.',
+  ]},
   { v:'1.4.3', date:'13 Sep 2026', changes:[
     'Added a Terms of Use page, linked from Profile under Help and contact.',
     'Creating an account now asks you to agree to the Terms of Use and Privacy Policy first.',
@@ -3077,7 +3144,10 @@ function populateCollectionSelect() {
 // ═══════════════════════════════════════════════════════════
 // GROUPS CRUD
 // ═══════════════════════════════════════════════════════════
+let _groupReturnToItem=false;
+function newGroupFromItem(){ openGroupModal(); _groupReturnToItem=true; }
 function openGroupModal(id, presetCollectionId) {
+  _groupReturnToItem=false;
   document.getElementById('editGroupId').value = id||'';
   document.getElementById('groupModalTitle').textContent = id ? 'Edit Group' : 'New Group';
   populateCollectionSelect();
@@ -3109,13 +3179,15 @@ async function saveGroup() {
     collectionId: document.getElementById('gCollection').value,
     updatedAt: new Date().toISOString()
   };
+  let newId = id;
   if (firebaseMode) {
     setSyncStatus('syncing');
     if (id) {
       await firestoreDb.doc(`${userPath()}/groups/${id}`).update(data);
     } else {
       data.createdAt = new Date().toISOString();
-      await firestoreDb.collection(`${userPath()}/groups`).add(data);
+      const _ref = await firestoreDb.collection(`${userPath()}/groups`).add(data);
+      newId = _ref.id;
     }
     setSyncStatus('synced');
   } else {
@@ -3123,12 +3195,25 @@ async function saveGroup() {
       const idx = db.groups.findIndex(g=>g.id===id);
       if (idx>=0) db.groups[idx] = {...db.groups[idx],...data};
     } else {
-      db.groups.push({id:uid(), ...data, createdAt:new Date().toISOString(), _open:true});
+      newId = uid();
+      db.groups.push({id:newId, ...data, createdAt:new Date().toISOString(), _open:true});
     }
     saveLocal(); render(); populateGroupSelect();
   }
   closeModal('groupModal');
   showToast('Group saved','✓');
+  // If the group was created from inside the item form, refresh its dropdown and pick the new group
+  if (_groupReturnToItem) {
+    _groupReturnToItem = false;
+    const gsel = document.getElementById('fGroup');
+    if (gsel) {
+      if (typeof populateGroupSelect === 'function') populateGroupSelect();
+      if (newId && !Array.from(gsel.options).some(o=>o.value===newId)) {
+        const o=document.createElement('option'); o.value=newId; o.textContent=name; gsel.appendChild(o);
+      }
+      if (newId) gsel.value = newId;
+    }
+  }
 }
 
 async function deleteGroup(id, e) {
@@ -5821,6 +5906,9 @@ function switchTab(e,id){
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+// Collapsible sections in the add/edit item form
+function toggleAfSect(id){ const s=document.getElementById(id); if(s) s.classList.toggle('open'); }
+function openAfSect(id){ const s=document.getElementById(id); if(s) s.classList.add('open'); }
 function populateGroupSelect(){
   const sel=document.getElementById('fGroup');if(!sel)return;
   const cur=sel.value;
@@ -5861,8 +5949,9 @@ function clearItemForm(){
   document.getElementById('catSpecificFields').innerHTML='';
   document.getElementById('extraFieldsList').innerHTML='';
   editPhotoData=[];renderPhotoGrid();
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
-  document.querySelectorAll('.tab-content').forEach((c,i)=>c.classList.toggle('active',i===0));
+  // Collapse all optional sections so a new item opens clean and uncluttered
+  document.querySelectorAll('#itemOverlay .af-sect').forEach(s=>s.classList.remove('open'));
+  const _pb=document.querySelector('#itemOverlay .panel-body'); if(_pb) _pb.scrollTop=0;
 }
 function onMaterialChange(){
   const sel=document.getElementById('fMaterial'); const box=document.getElementById('fMaterialCustom');
@@ -5915,6 +6004,9 @@ function onCategoryChange(){
     else { box.style.display='none'; box.value=''; if(wrap) wrap.style.display='none'; if(em) em.value=''; }
   }
   updateCatFields();
+  // If this category brings its own fields, reveal the details section so they are seen
+  const csf=document.getElementById('catSpecificFields');
+  if(csf && csf.innerHTML.trim()) openAfSect('afsecDetails');
 }
 function getCategoryValue(){
   const sel=document.getElementById('fCategory');

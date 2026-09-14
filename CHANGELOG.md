@@ -4,6 +4,15 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.5.0] · 2026-09-14
+
+### Changed
+- Add and edit item is now a single scrolling form instead of five tabs. The photo comes first, with the "AI fill from photo" button beside it, then the essentials (name, category, group, short description), then optional sections (condition and measurements, notes and history, acquisition, custom fields) that stay collapsed until you open them. When the AI fills a field inside a collapsed section, that section opens so nothing is applied out of sight.
+- Creating a group while adding an item is easier: a New button sits next to the group picker and the new group is selected automatically. The group field is clearly marked optional so a new item saves quickly.
+
+### Fixed
+- AI photo reading no longer fails on large iPad or phone photos. Each image is downscaled in the browser (longest edge 1536px, re-encoded as JPEG) before it is sent to the AI, which keeps it under the size limit and also makes each AI photo call faster. Applies to both "AI fill from photo" and Smart Import from an image, and falls back to the original image if resizing ever fails.
+
 ## [1.4.3] · 2026-09-13
 
 ### Added
