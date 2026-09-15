@@ -1363,6 +1363,25 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
     <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal('upgradeModal')">Not now</button>
   </div>
 </div>
+<div class="modal-overlay" id="feedbackModal" onclick="closeIfBg(event,'feedbackModal')">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:440px">
+    <div class="modal-title">💬 Send feedback</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">Tell us what is broken or what you would like added. We read every message.</p>
+    <div class="field-row"><label>Type</label>
+      <select id="fbType">
+        <option value="idea">Idea or feature request</option>
+        <option value="bug">Bug or something broken</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="field-row"><label>Your message</label>
+      <textarea id="fbMessage" style="min-height:120px" placeholder="What happened, or what would you like to see?"></textarea>
+    </div>
+    <button class="btn btn-gold" id="fbSendBtn" style="width:100%;justify-content:center;margin-bottom:8px" onclick="submitFeedbackForm()">Send feedback</button>
+    <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="closeModal('feedbackModal')">Cancel</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="profileModal" onclick="closeIfBg(event,'profileModal')">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:440px">
     <div class="modal-title">My Profile</div>
@@ -1381,6 +1400,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
     <hr class="section-divider">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Help &amp; contact</div>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px">Questions, bugs or feature ideas — we read every message.</p>
+    <button class="btn btn-gold" style="width:100%;justify-content:center;margin-bottom:8px" onclick="closeModal('profileModal');openFeedback()">💬 Send feedback</button>
     <a class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:8px" href="mailto:support@hoardrapp.com?subject=Hoardr%20support" target="_blank" rel="noopener">✉ Email support</a>
     <a class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:8px" href="privacy.html" target="_blank" rel="noopener">🔒 Privacy policy</a>
     <a class="btn btn-outline" style="width:100%;justify-content:center" href="terms.html" target="_blank" rel="noopener">📜 Terms of use</a>
@@ -1938,11 +1958,14 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.5.1';             // semantic version — quote in bug reports
-const APP_VERSION_DATE = '2026-09-14';   // release date of this build
+const APP_VERSION = '1.6.0';             // semantic version — quote in bug reports
+const APP_VERSION_DATE = '2026-09-15';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.6.0', date:'15 Sep 2026', changes:[
+    'You can now send feedback straight from the app. Open Profile, then under Help and contact tap Send feedback, pick whether it is a bug, an idea or something else, and write your message. We read every one.',
+  ]},
   { v:'1.5.1', date:'14 Sep 2026', changes:[
     'Fixed a setup issue where some accounts were given a sample "Locomotive & Train Collection" that they did not add. New accounts now start empty, and that sample collection has been removed from the accounts that received it. Your own collections were never affected.',
   ]},
@@ -2103,6 +2126,29 @@ function _isInstalledPWA(){ try{ return (window.matchMedia && window.matchMedia(
 // ── Billing / Hoardr Pro (Stripe hosted Checkout + portal) ──
 let _upgPlan='annual';
 function openUpgrade(){ _upgPlan='annual'; _renderUpgrade(); openModal('upgradeModal'); }
+// ── User feedback ──
+function openFeedback(){
+  const t=document.getElementById('fbType'); if(t) t.value='idea';
+  const m=document.getElementById('fbMessage'); if(m) m.value='';
+  openModal('feedbackModal');
+}
+async function submitFeedbackForm(){
+  const msg=((document.getElementById('fbMessage')||{}).value||'').trim();
+  if(!msg){ showToast('Type a message first','✍️'); return; }
+  if(!fnSvc){ showToast('Feedback unavailable — reload and try again','⚠️'); return; }
+  const type=(document.getElementById('fbType')||{}).value||'other';
+  const btn=document.getElementById('fbSendBtn'); const orig=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='Sending…'; }
+  try{
+    await fnSvc.httpsCallable('submitFeedback')({ type, message:msg, appVersion:(typeof APP_VERSION!=='undefined'?APP_VERSION:''), userAgent:navigator.userAgent });
+    showToast('Thanks — your feedback was sent','✅');
+    closeModal('feedbackModal');
+  }catch(e){
+    const c=(e&&e.code)||'';
+    if(c.indexOf('unauthenticated')>=0) showToast('Sign in to send feedback','🔒');
+    else showToast('Could not send — '+((e&&e.message)||'please try again'),'⚠️');
+  }finally{ if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
+}
 function setUpgPlan(p){ _upgPlan=p; _renderUpgrade(); }
 function _renderUpgrade(){
   const box=document.getElementById('upgradeBody'); if(!box) return;

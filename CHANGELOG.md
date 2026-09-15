@@ -4,6 +4,11 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.6.0] · 2026-09-15
+
+### Added
+- In-app feedback. Profile now has a "Send feedback" button under Help and contact that opens a short form (Bug / Idea / Other plus a message). Submissions go through a new App Check + auth gated callable `submitFeedback` that writes to a top-level `feedback` collection via the Admin SDK (uid, email, type, message, appVersion, userAgent, createdAt). No Firestore rules change needed since there is no client-writable feedback path; read submissions in the Firebase console. Needs the function deployed: `npx -y firebase-tools deploy --only functions:submitFeedback` (may need the Cloud Run allow-public-access flip on first deploy).
+
 ## [1.5.1] · 2026-09-14
 
 ### Fixed
