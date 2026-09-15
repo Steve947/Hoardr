@@ -1449,6 +1449,16 @@ const TEST_PRO_EMAILS = [
   // 'tester1@example.com',
   // 'tester2@example.com',
 ];
+// Free 1-year Pro grants (dad's friends). Pro tier, not owner. Each reverts to
+// free after GRANTED_PRO_UNTIL. The server (functions/index.js) enforces the same
+// window; this client check only mirrors it so the UI matches.
+const GRANTED_PRO_UNTIL = '2027-09-15';   // granted 15 Sep 2026; valid through this date
+const GRANTED_PRO_EMAILS = ['kateisgreatb18@gmail.com', 'celeste.bond@bigpond.com', 'gazza.321@bigpond.com'];
+function isGrantedProNow(email){
+  if(!email) return false;
+  if(!GRANTED_PRO_EMAILS.includes(email.toLowerCase())) return false;
+  return Date.now() < Date.parse(GRANTED_PRO_UNTIL + 'T23:59:59Z');
+}
 const PRO_EMAILS = OWNER_PRO_EMAILS.concat(TEST_PRO_EMAILS).map(e => e.toLowerCase());
 
 // ── AI features: available to Pro subscribers and owners. isProUser reflects
@@ -2038,7 +2048,7 @@ async function _refreshEntitlement(){
     const d = await firestoreDb.doc(`users/${currentUser.uid}`).get();
     const pro = d.exists && d.get('isPro')===true;
     const was = isProUser;
-    isProUser = pro || PRO_EMAILS.includes((currentUser.email||'').toLowerCase());
+    isProUser = pro || PRO_EMAILS.includes((currentUser.email||'').toLowerCase()) || isGrantedProNow(currentUser.email);
     _aiCredits = (d.exists && d.get('aiCredits')) || 0;
     if(isProUser!==was){ try{ updateAiUi(); }catch(e){} try{ render(); }catch(e){} }
     try{ _renderProUI(); }catch(e){}
@@ -2766,7 +2776,7 @@ function setupAuthListener() {
   auth.onAuthStateChanged(user => {
     if (user) {
       currentUser = user;
-      isProUser = PRO_EMAILS.includes((user.email||'').toLowerCase());
+      isProUser = PRO_EMAILS.includes((user.email||'').toLowerCase()) || isGrantedProNow(user.email);
       _refreshEntitlement();   // also honour a billing-set isPro flag on the account doc (guarded)
       updateAiUi();
       document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
