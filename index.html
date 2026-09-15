@@ -2030,13 +2030,13 @@ const CHANGELOG = [
 const FREE_MAX_ITEMS = 200, FREE_MAX_COLLECTIONS = 5, FREE_MAX_PHOTOS = 3, PRO_MAX_PHOTOS = 6;
 // Absolute per-account ceilings (cost protection, everyone — NOT a tier limit).
 const HARD_MAX_ITEMS = 5000, HARD_MAX_COLLECTIONS = 100;
-// ── Monetisation: currently FREE FOR EVERYONE ──────────────────────────
-// Decided 20 Jul 2026 to drop the paid tier. FREE_FOR_ALL unlocks every
-// Pro-gated feature at once (all gates call isPro()). The caps constants and
-// the per-feature gates are left in place but dormant, so a future paid tier
-// is a one-line change back to `return isProUser`. Optional support is via a
-// Ko-fi link, not an in-app paywall.
-const FREE_FOR_ALL = true;
+// ── Monetisation: PAID TIER LIVE (go-live 15 Sep 2026) ─────────────────
+// FREE_FOR_ALL was the "free for everyone" master switch (dropped paid tier,
+// 20 Jul 2026). Flipped to false at go-live so the free-tier caps (200 items /
+// 5 collections) and the per-feature Pro gates (catalogue PDF, insurance
+// appraisal, duplicate item) enforce for non-Pro accounts. To temporarily open
+// everything again, set this back to true.
+const FREE_FOR_ALL = false;
 function isPro(){ return FREE_FOR_ALL || isProUser; }
 // Entitlement: a real paid subscription sets users/{uid}.isPro=true via the billing
 // webhook (Stripe/PayPal → Cloud Function, Admin SDK). The client reads it here and ORs
