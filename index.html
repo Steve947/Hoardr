@@ -201,6 +201,7 @@ label.btn.btn-sm{font-size:12px}
 .panel{width:600px;max-width:98vw;height:100vh;background:var(--surface);border-left:1px solid var(--border2);display:flex;flex-direction:column;transform:translateX(40px);transition:transform .25s ease;overflow:hidden;box-shadow:-8px 0 40px rgba(0,0,0,.6)}
 .overlay.open .panel{transform:translateX(0)}
 #aiValueOverlay{z-index:400}  /* sit above the item-view drawer (.overlay z200) so the estimate shows when opened from the view */
+#upgradeModal,#topupModal{z-index:600}  /* upsell modals must sit above AI overlays (z400) and cap-hit banners (z500), or they open behind a black backdrop */
 .panel-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%)}
 .panel-title{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--gold2);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* The item view header has four buttons. On a phone they overflowed and pushed
@@ -2237,7 +2238,7 @@ function _renderProUI(){
     box.innerHTML='<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">✓ You\'re on Hoardr Pro</div>'
       +_usageLine
       +_creditLine
-      +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="openTopup()">＋ Buy AI credits</button>'
+      +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="closeModal(\'profileModal\');openTopup()">＋ Buy AI credits</button>'
       +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="openBillingPortal()">Manage subscription</button>';
   } else {
     box.innerHTML='<p style="font-size:12px;color:var(--text3);margin-bottom:2px">Unlock more with Pro: AI cataloguing, value estimates and tracking, and monthly reports.</p>'
