@@ -1363,6 +1363,14 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
     <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal('upgradeModal')">Not now</button>
   </div>
 </div>
+<div class="modal-overlay" id="topupModal" onclick="closeIfBg(event,'topupModal')">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:400px">
+    <div class="modal-title">⚡ Top up AI credits</div>
+    <div id="topupBody"></div>
+    <button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal('topupModal')">Not now</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="feedbackModal" onclick="closeIfBg(event,'feedbackModal')">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:440px">
     <div class="modal-title">💬 Send feedback</div>
@@ -1958,11 +1966,14 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.6.0';             // semantic version — quote in bug reports
+const APP_VERSION = '1.7.0';             // semantic version — quote in bug reports
 const APP_VERSION_DATE = '2026-09-15';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.7.0', date:'15 Sep 2026', changes:[
+    'Pro members can now top up AI credits. If you use all your monthly AI actions, buy a one-off pack of 50 more for A$2.99. The extra credits never expire and are used automatically once your monthly allowance runs out. Buy them from Profile or when you hit the limit.',
+  ]},
   { v:'1.6.0', date:'15 Sep 2026', changes:[
     'You can now send feedback straight from the app. Open Profile, then under Help and contact tap Send feedback, pick whether it is a bug, an idea or something else, and write your message. We read every one.',
   ]},
@@ -2027,12 +2038,15 @@ async function _refreshEntitlement(){
     const pro = d.exists && d.get('isPro')===true;
     const was = isProUser;
     isProUser = pro || PRO_EMAILS.includes((currentUser.email||'').toLowerCase());
+    _aiCredits = (d.exists && d.get('aiCredits')) || 0;
     if(isProUser!==was){ try{ updateAiUi(); }catch(e){} try{ render(); }catch(e){} }
+    try{ _renderProUI(); }catch(e){}
     _refreshAiQuota();
   }catch(e){ /* read rule not deployed yet, or offline — keep the allowlist fallback */ }
 }
 // ── AI monthly quota (free taste vs Pro). Server-enforced; this is display + upsell. ──
 let _aiUsage = { used: 0, limit: null };
+let _aiCredits = 0; // never-expiring top-up wallet (users/{uid}.aiCredits), Pro-purchased
 async function _refreshAiQuota(){
   try{
     if(!(firebaseMode && currentUser)) return;
@@ -2050,7 +2064,8 @@ function _handleAiQuota(e){
     showToast((e&&e.message)||'You have reached your free AI limit this month','🔒');
     try{ openUpgrade(); }catch(_){}
   } else {
-    showToast((e&&e.message)||'You have reached your AI limit this month','⏳');
+    showToast((e&&e.message)||'You have used all your AI actions this month','⏳');
+    try{ openTopup(); }catch(_){}
   }
   return true;
 }
@@ -2184,6 +2199,26 @@ async function startCheckout(plan){
     if(url){ window.location.href=url; } else { showToast('Could not start checkout','⚠️'); }
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
+function openTopup(){
+  const box=document.getElementById('topupBody');
+  if(box){
+    box.innerHTML='<div style="text-align:center;margin-bottom:6px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">A$2.99</span></div>'
+      +'<div style="text-align:center;font-size:13px;color:var(--text);margin-bottom:4px">50 extra AI actions</div>'
+      +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">A one-off top-up. These credits never expire and are used automatically once your monthly allowance runs out.</div>'
+      +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="startTopup()">Buy 50 credits</button>'
+      +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">One-off payment, billed in AUD via Stripe. No change to your subscription.</p>';
+  }
+  openModal('topupModal');
+}
+async function startTopup(){
+  if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
+  showToast('Opening secure checkout…','💳');
+  try{
+    const r=await fnSvc.httpsCallable('createCheckoutSession')({plan:'topup'});
+    const url=r&&r.data&&r.data.url;
+    if(url){ window.location.href=url; } else { showToast('Could not start checkout','⚠️'); }
+  }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('failed-precondition')>=0) showToast('Top-ups are for Pro subscribers','🔒'); else if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
+}
 async function openBillingPortal(){
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   showToast('Opening your billing portal…','💳');
@@ -2198,8 +2233,11 @@ function _renderProUI(){
   const _lim=_aiUsage.limit||(isProUser?50:5), _used=_aiUsage.used||0, _left=Math.max(0,_lim-_used);
   const _usageLine='<div style="font-size:11px;color:var(--text3);margin:6px 0 2px">AI actions this month: <strong style="color:var(--text2)">'+_used+' of '+_lim+'</strong> used'+(_left<=0?' (resets on the 1st)':'')+'</div>';
   if(isProUser){
+    const _creditLine=(_aiCredits>0)?'<div style="font-size:11px;color:var(--gold2);margin:2px 0 0">Top-up credits: <strong>'+_aiCredits+'</strong> left (never expire)</div>':'';
     box.innerHTML='<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">✓ You\'re on Hoardr Pro</div>'
       +_usageLine
+      +_creditLine
+      +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="openTopup()">＋ Buy AI credits</button>'
       +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="openBillingPortal()">Manage subscription</button>';
   } else {
     box.innerHTML='<p style="font-size:12px;color:var(--text3);margin-bottom:2px">Unlock more with Pro: AI cataloguing, value estimates and tracking, and monthly reports.</p>'
@@ -2245,6 +2283,7 @@ function _handleBillingReturn(){
     const u=new URL(window.location.href); const b=u.searchParams.get('billing');
     if(!b) return;
     if(b==='success'){ showToast('Welcome to Hoardr Pro! 🎉 Your 7-day trial has started.','✨'); setTimeout(_refreshEntitlement,3000); setTimeout(_refreshEntitlement,9000); }
+    else if(b==='topup'){ showToast('Credits added — thanks! Your top-up is ready.','⚡'); setTimeout(_refreshEntitlement,3000); setTimeout(_refreshEntitlement,9000); }
     else if(b==='cancel'){ showToast('Checkout cancelled — no charge made','👍'); }
     u.searchParams.delete('billing'); window.history.replaceState({}, document.title, u.pathname+u.search+u.hash);
   }catch(e){}

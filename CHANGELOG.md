@@ -4,6 +4,11 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.7.0] · 2026-09-15
+
+### Added
+- AI credit top-ups (Pro only). A one-off A$2.99 pack of 50 extra AI actions that never expire and are drawn on automatically once the monthly allowance runs out. Offered when a Pro member hits their monthly cap and from Profile > Hoardr Pro (Buy AI credits). Stored as a wallet in users/{uid}.aiCredits (server-only writes). Server pieces: consumeQuota now falls through to the wallet when the month is exhausted; createCheckoutSession supports plan "topup" in Stripe payment mode, gated to Pro subscribers/owners; the webhook adds the purchased credits on checkout.session.completed for a top-up. Live one-time Stripe price price_1UFl4V3SowKeLXaYqAZgA84O. Needs the functions redeployed (createCheckoutSession, stripeWebhook, aiAssist) plus deploy.bat for the site.
+
 ## [1.6.0] · 2026-09-15
 
 ### Added
