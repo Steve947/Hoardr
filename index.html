@@ -3573,12 +3573,33 @@ function getFilteredItems() {
   }
   if (filterCat!=='all') items = items.filter(i=>i.category===filterCat);
   if (searchTerm) {
-    const s = searchTerm.toLowerCase();
-    items = items.filter(i=>
-      (i.name||'').toLowerCase().includes(s)||(i.material||'').toLowerCase().includes(s)||
-      (i.obtainedFrom||'').toLowerCase().includes(s)||(i.notes||'').toLowerCase().includes(s)||
-      (i.tags||'').toLowerCase().includes(s)||(i.category||'').toLowerCase().includes(s)
-    );
+    const s = searchTerm.toLowerCase().trim();
+    const sNorm = s.replace(/[^a-z0-9]+/g,'');
+    const _grp = gid => db.groups.find(x=>x.id===gid);
+    const _col = cid => db.collections.find(x=>x.id===cid);
+    items = items.filter(i=>{
+      const parts=[];
+      try{
+        // every plain field on the item (name, value, dates, condition, seller, etc.)
+        for(const k in i){
+          if(k==='photos'||k==='id'||k==='catFieldVals'||k==='extraFields') continue;
+          const v=i[k];
+          if(v==null||typeof v==='object') continue;
+          parts.push(String(v));
+        }
+        // category-specific fields (running number, livery, era, etc.)
+        if(i.catFieldVals) for(const v of Object.values(i.catFieldVals)) if(v!=null) parts.push(String(v));
+        // custom fields
+        if(Array.isArray(i.extraFields)) i.extraFields.forEach(f=>{ if(f){ if(f.label)parts.push(String(f.label)); if(f.value)parts.push(String(f.value)); }});
+        // group and collection names
+        const g=_grp(i.groupId); if(g){ if(g.name)parts.push(g.name); const c=_col(g.collectionId); if(c&&c.name)parts.push(c.name); }
+        if(i.collectionId){ const c2=_col(i.collectionId); if(c2&&c2.name)parts.push(c2.name); }
+      }catch(e){}
+      const hay = parts.filter(Boolean).join(' \u0001 ').toLowerCase();
+      if(hay.includes(s)) return true;
+      // punctuation-insensitive: "R.250" also matches "R250" and vice versa
+      return sNorm.length>0 && hay.replace(/[^a-z0-9]+/g,'').includes(sNorm);
+    });
   }
   if (sortKey) {
     items = [...items].sort((a,b)=>{
@@ -3867,7 +3888,7 @@ const TRAIN_MAKES = ["Bachmann", "Hornby", "Lima", "Triang", "Triang Wrenn"];
 const TRAIN_TYPES = ["Diesel", "Electric", "Steam"];
 const TRAIN_RAILWAYS = ["BR", "Comm", "GNR", "GWR", "LMS", "LNER", "NSWGR", "NSWR", "PR", "Private", "S&D.J.R", "SR", "TR", "VR", "WR"];
 const TRAIN_GAUGES = ["HO", "HO/OO", "OO"];
-const TRAIN_COLOURS = ["Black", "Blue", "Blue/Black", "Blue/Yellow", "Crimson", "Green", "Green/Black", "Maroon", "NSWR Candy", "Olive", "Olive Green", "Red", "Red/Black", "Red/Grey", "Silver/Red", "Swallow", "Swallow Grey", "Yellow"];
+const TRAIN_COLOURS = ["Black", "Blue", "Blue/Black", "Blue/Yellow", "Crimson", "Green", "Green/Black", "Grey", "Maroon", "NSWR Candy", "Olive", "Olive Green", "Red", "Red/Black", "Red/Grey", "Silver/Red", "Swallow", "Swallow Grey", "Yellow"];
 
 const DC_MODEL_MFRS = ["Agri", "Almost Real", "Atlas Copco", "Auto World", "AUTOart", "Bavarian Scalemodels", "BBR", "Bburago", "Bosinytoys", "Brumm", "Bugatti Automobiles", "CMC", "Conrad", "Conrad (4991 of  5000)", "Corgi", "Csichuan Changjiang", "Cursor", "Danbury Mint", "Diapet", "Die Cast Promotions", "Diecast Masters", "Dinky", "Drake", "Dynamic Acera", "Ertl", "Exoto", "First Gear", "Franklin Mint", "Gamma", "Gescha", "Gescha Conrad", "Greenlight", "GT Spirit", "Hartsmith", "Herpa", "Hongwell(Caramara)", "Hot Wheels", "Iconic Replicas", "Ixo", "Jada Toys", "Joal", "Johnny Lightning", "King Equipment", "Kyosho", "LookSmart", "M2 Machines", "Maisto", "Majorette", "Matchbox", "MatchBox Collectibles", "Mattel", "Mini GT", "Minichamps", "Minimac", "Motorart", "Motormax", "Norev", "Norscot", "NZG", "Otto Mobile", "Oxford Diecast", "Polistil", "Racing Champions", "ROS", "Ros", "Schuco", "Sennebogen", "Shinsei", "Shinsei?", "Siku", "Smart Toys", "Solido", "Spark", "SpecCast", "Sun Star", "Sword Models", "Tamiya", "Tarmac Works", "Tecnomodel", "Tomica", "Tonkin Replicas", "Tonkin Replicas Precision", "Tonkin Replicas Signature", "Trofeu", "TWH Collectables", "TWH Collectibles", "Universal Hobbies", "Vitesse", "Welly", "Wiking", "WSI Models", "Yat Ming", "Yonezawa Diapet"];
 const DC_EQUIP_MFRS = ["Abarth", "AC", "Alfa Romeo", "Allis Chalmers", "Ammann", "Aston Martin", "Atlas Copco", "Audi", "Austin", "Bell", "Bentley", "BMW", "Bobcat", "Bucyrus", "Bucyrus Erie", "Bugatti", "Buick", "Cadillac", "Case", "Case Construction", "Case International", "Caterpillar", "Chevrolet", "Chevrolet Truck LQ", "Chrysler", "Churchill Military", "Citroen", "Clark", "CPG", "Datsun", "De Tomaso", "Demag", "Dodge", "Drake", "Dresser", "Esco", "Euclid", "Ferrari", "Fiat", "Ford", "Ford Model A", "Ford Model T", "Freighter", "Freightliner", "Fuchs", "GMC", "Gottwald", "Grove", "Hanomag", "Hitachi", "Holden", "Honda", "Hyundai", "Ingersoll Rand", "International", "Jaguar", "Jeep", "John Deere", "Jonyang", "Kaidiwei", "Kato", "Kawasaki", "Kenworth", "Kenworth(Bowers)", "Kenworth(Toll)", "Kobelco", "Koenigsegg", "Komatsu", "Komatsu Haulpak #495", "Lamborghini", "Lancia", "Land Rover", "LeTourneau", "Lexus", "Liebherr", "Link-Belt", "Lotus", "Mack", "Mack(Bowers)", "Mack(RW Miller)", "Maserati", "Massey Ferguson", "Mavac", "Mazda", "McLaren", "Menck", "Mercedes-Benz", "MG", "Michigan", "Michigan(Clark)", "Mini", "Mitsubishi", "Morris", "Moxy", "Moxy(Komatsu)", "New Holland", "Nissan", "Northwest Engineering", "O&K", "Oldsmobile", "Opel", "P&H", "Pagani", "Peterbilt", "Peugeot", "Plymouth", "Pontiac", "Porsche", "PPM", "RAC & AA", "Renault", "Roadtec", "Rolls-Royce", "Rover", "Ruston Bucyrus", "Saab", "Seat", "Sennebogen", "Shelby", "Shuttlelift", "Skoda", "Sterling", "Subaru", "Sumitomo", "Suzuki", "Tadano", "Taxi", "Terex", "Tesla", "Toll", "Tonkin Replicas", "Toyota", "Triumph", "Vauxhall", "Vermeer", "Volkswagen", "Volvo", "Volvo BM", "Wabco Haulpak", "Wesehutte", "Western Star", "Wirtgen", "Zeppelin"];
