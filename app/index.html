@@ -855,6 +855,14 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
               <option value="Locomotive">🚂 Locomotive / Train</option>
               <option value="Stickers">🏷️ Stickers</option>
               <option value="Toby Jug">🏺 Toby Jug</option>
+              <option value="Trading Cards">🃏 Trading Cards (Pokémon, sports, etc.)</option>
+              <option value="Coins">💰 Coins</option>
+              <option value="Banknotes">💵 Banknotes</option>
+              <option value="Comics">📚 Comics</option>
+              <option value="Vinyl Records">💿 Vinyl Records</option>
+              <option value="Action Figures">🤖 Action Figures</option>
+              <option value="Watches">⌚ Watches</option>
+              <option value="Militaria &amp; Medals">🎖️ Militaria &amp; Medals</option>
               <option value="Other">📁 Other</option>
               <option value="__custom__">➕ Add custom…</option>
             </select>
@@ -1166,6 +1174,14 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <option value="Locomotive">🚂 Locomotive / Train</option>
           <option value="Stickers">🏷️ Stickers</option>
           <option value="Toby Jug">🏺 Toby Jug</option>
+          <option value="Trading Cards">🃏 Trading Cards (Pokémon, sports, etc.)</option>
+          <option value="Coins">💰 Coins</option>
+          <option value="Banknotes">💵 Banknotes</option>
+          <option value="Comics">📚 Comics</option>
+          <option value="Vinyl Records">💿 Vinyl Records</option>
+          <option value="Action Figures">🤖 Action Figures</option>
+          <option value="Watches">⌚ Watches</option>
+          <option value="Militaria &amp; Medals">🎖️ Militaria &amp; Medals</option>
           <option value="Other">📁 Other</option>
         </select>
       </div>
@@ -1260,6 +1276,14 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <option value="Locomotive">🚂 Locomotive / Train</option>
           <option value="Stickers">🏷️ Stickers</option>
           <option value="Toby Jug">🏺 Toby Jug</option>
+          <option value="Trading Cards">🃏 Trading Cards (Pokémon, sports, etc.)</option>
+          <option value="Coins">💰 Coins</option>
+          <option value="Banknotes">💵 Banknotes</option>
+          <option value="Comics">📚 Comics</option>
+          <option value="Vinyl Records">💿 Vinyl Records</option>
+          <option value="Action Figures">🤖 Action Figures</option>
+          <option value="Watches">⌚ Watches</option>
+          <option value="Militaria &amp; Medals">🎖️ Militaria &amp; Medals</option>
           <option value="Other">📁 Other</option>
         </select>
       </div>
@@ -3365,7 +3389,7 @@ function openEditItem(id) {
   const fields = ['Name','Material','ObtainedDate','ObtainedFrom','PurchasePrice','Seller','Provenance','CertRef','Insurance','ShortDesc','Notes','History','Tags'];
   fields.forEach(f => { const el = document.getElementById('f'+f); if(el) el.value = item[f.charAt(0).toLowerCase()+f.slice(1)]||''; });
   setCategoryField(item.category||'');
-  document.getElementById('fCondition').value = item.condition||'';
+  updateConditionOptions(item.condition||'');
   document.getElementById('fGroup').value = item.groupId||'';
   document.getElementById('fValue').value = item.value||'';
   document.getElementById('fHeight').value = item.height||'';
@@ -3545,7 +3569,7 @@ function duplicateItem(id) {
   document.getElementById('fName').value = 'Copy of ' + (copy.name||'');
   setCategoryField(copy.category||'');
   document.getElementById('fGroup').value = copy.groupId||'';
-  document.getElementById('fCondition').value = copy.condition||'';
+  updateConditionOptions(copy.condition||'');
   setMaterialField(copy.material||'');
   document.getElementById('fValue').value = copy.value||'';
   document.getElementById('fHeight').value = copy.height||'';
@@ -3641,11 +3665,11 @@ function updateStats() {
 }
 function qtyOf(i){ const n=parseInt(i&&i.quantity,10); return (n&&n>0)?n:1; }
 let customCats = [];  // [{name,emoji}] — persistent custom categories (see below)
-const BUILTIN_CATS = ['Belt Buckle','Stamp','Diecast','Locomotive','Stickers','Toby Jug','Other'];
+const BUILTIN_CATS = ['Belt Buckle','Stamp','Diecast','Locomotive','Stickers','Toby Jug','Trading Cards','Coins','Banknotes','Comics','Vinyl Records','Action Figures','Watches','Militaria & Medals','Other'];
 function catEmoji(cat){
   const cc=Array.isArray(customCats)?customCats.find(x=>x&&(x.name||x)===cat):null;
   if(cc&&cc.emoji) return cc.emoji;
-  return {'Belt Buckle':'🪙','Stamp':'📮','Diecast':'🚗','Locomotive':'🚂','Stickers':'🏷️','Toby Jug':'🏺','Other':'📁'}[cat]||'📦';
+  return {'Belt Buckle':'🪙','Stamp':'📮','Diecast':'🚗','Locomotive':'🚂','Stickers':'🏷️','Toby Jug':'🏺','Trading Cards':'🃏','Coins':'💰','Banknotes':'💵','Comics':'📚','Vinyl Records':'💿','Action Figures':'🤖','Watches':'⌚','Militaria & Medals':'🎖️','Other':'📁'}[cat]||'📦';
 }
 function catColor(cat){return{'Belt Buckle':'#c9a84c','Stamp':'#6aab7a','Diecast':'#5a8eb0','Locomotive':'#8b5e9a','Stickers':'#d08a3a','Toby Jug':'#b5794a','Other':'#c06090'}[cat]||'#7a6e58'}
 
@@ -6063,6 +6087,7 @@ function clearItemForm(){
   const _ce=document.getElementById('fCategoryEmoji'); if(_ce)_ce.value='';
   const _cw=document.getElementById('fCategoryIconWrap'); if(_cw)_cw.style.display='none';
   document.getElementById('fCondition').value='';
+  updateConditionOptions('');
   document.getElementById('fGroup').value='';
   document.getElementById('fRating').value=0;
   setRatingDisplay(0);
@@ -6124,9 +6149,26 @@ function onCategoryChange(){
     else { box.style.display='none'; box.value=''; if(wrap) wrap.style.display='none'; if(em) em.value=''; }
   }
   updateCatFields();
+  updateConditionOptions();
   // If this category brings its own fields, reveal the details section so they are seen
   const csf=document.getElementById('catSpecificFields');
   if(csf && csf.innerHTML.trim()) openAfSect('afsecDetails');
+}
+// Condition grades are category aware: stamps use philatelic grades (U, FU, MUH…),
+// everything else uses the general Mint→Poor scale. Any existing/legacy value on an
+// item is always kept as an option so editing never silently drops a saved condition.
+function updateConditionOptions(desired){
+  const sel=document.getElementById('fCondition'); if(!sel) return;
+  const cur=(desired!==undefined && desired!==null) ? String(desired) : sel.value;
+  const cat=(typeof getCategoryValue==='function') ? getCategoryValue() : '';
+  const GENERAL=['Mint','Excellent','Good','Fair','Poor'];
+  const STAMP=['Used (U)','Used on cover (UOC)','Fine Used (FU)','Mint unhinged (MUH)','Mint (M)','Cancelled to order (CTO)'];
+  const list=(cat==='Stamp') ? STAMP.slice() : GENERAL.slice();
+  if(cur && list.indexOf(cur)<0) list.push(cur);
+  sel.innerHTML='';
+  const blank=document.createElement('option'); blank.value=''; blank.textContent='— Select —'; sel.appendChild(blank);
+  list.forEach(v=>{ const o=document.createElement('option'); o.textContent=v; sel.appendChild(o); });
+  sel.value=cur;
 }
 function getCategoryValue(){
   const sel=document.getElementById('fCategory');
