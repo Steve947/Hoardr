@@ -1565,12 +1565,18 @@ async function aiEstimateValue(){
     const _eid=(document.getElementById('editId')||{}).value||null;
     _aiValuePending = { r:r, ctx:'edit', itemId:_eid };
     if(_eid){ const _it=db.items.find(i=>i.id===_eid); if(_it) _logValueEstimate(_it, r); }
-    _renderAiValue(r, g);
+    _renderAiValue(r, g, (ctx&&ctx.name)||'');
     openModal('aiValueOverlay');
   }catch(e){ _aiValueErr(e); }finally{ if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
 }
 function _aiValMoney(n){ if(n==null||isNaN(n)) return '—'; const s=(typeof curSym==='function'?curSym():'$'); return s+Number(n).toLocaleString(undefined,{maximumFractionDigits:2}); }
-function _renderAiValue(r, g){
+function _ebaySoldUrl(q){
+  const query=(q||'').toString().trim(); if(!query) return '';
+  const cc=(typeof curCode==='function'?curCode():'')||'';
+  const host = cc==='AUD'?'www.ebay.com.au' : cc==='GBP'?'www.ebay.co.uk' : cc==='CAD'?'www.ebay.ca' : cc==='EUR'?'www.ebay.de' : 'www.ebay.com';
+  return 'https://'+host+'/sch/i.html?_nkw='+encodeURIComponent(query)+'&LH_Sold=1&LH_Complete=1';
+}
+function _renderAiValue(r, g, query){
   const body=document.getElementById('aiValueBody');
   const conf=(r.confidence||'low');
   const confColor = conf==='high'?'var(--gold)':(conf==='medium'?'#c9a84c':'var(--text3)');
@@ -1596,6 +1602,15 @@ function _renderAiValue(r, g){
   if(src.length){
     html+='<div style="font-size:12px;color:var(--text3);margin-top:8px">Sources</div><ul style="margin:4px 0 8px;padding-left:18px;font-size:12px">'
       +src.map(s=>{ const t=(typeof s==='string')?s:(s.title||s.url||''); const u=(s&&s.url)?s.url:''; return '<li>'+(u?'<a href="'+escH(u)+'" target="_blank" rel="noopener" style="color:var(--gold)">'+escH(t||u)+'</a>':escH(t))+'</li>'; }).join('')+'</ul>';
+  }
+  // Always offer a link to check recent sold listings for this item, even when
+  // the model returned no specific source URLs of its own. This is a way to see
+  // the comps yourself; the estimate also draws on other marketplaces and price
+  // guides, and any specific sources it cited are listed above.
+  const _q = (g&&g.query) || (r&&(r.search_query||r.query)) || query || '';
+  const _esu = _ebaySoldUrl(_q);
+  if(_esu){
+    html+='<div style="margin-top:10px"><a href="'+escH(_esu)+'" target="_blank" rel="noopener" style="color:var(--gold);font-size:13px;font-weight:600">🔎 Check recent eBay sold listings for this item →</a></div>';
   }
   html+='<p style="font-size:11px;color:var(--text3);margin-top:10px">Estimate only — a starting point, not an appraisal or an offer. Sanity-check before insuring or selling.'+(r.as_of?(' As of '+escH(r.as_of)+'.'):'')+'</p>';
   body.innerHTML=html;
@@ -1658,7 +1673,7 @@ async function aiEstimateValueView(){
     _aiValuePending={ r:r, ctx:'view', itemId:item.id };
     await _logValueEstimate(item, r);
     viewItem(item.id);
-    _renderAiValue(r, g);
+    _renderAiValue(r, g, (item&&item.name)||'');
     openModal('aiValueOverlay');
   }catch(e){ _aiValueErr(e); }
   finally{ if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
@@ -3603,13 +3618,20 @@ function duplicateItem(id) {
 // ═══════════════════════════════════════════════════════════
 function getFilteredItems() {
   let items = db.items;
-  if (selectedGroupId) {
-    items = items.filter(i=>i.groupId===selectedGroupId);
-  } else if (selectedCollectionId) {
-    const groupIds = db.groups.filter(g=>g.collectionId===selectedCollectionId).map(g=>g.id);
-    items = items.filter(i=>groupIds.includes(i.groupId));
+  // When there is an active search, search the WHOLE collection: ignore the
+  // selected collection/group AND the category filter, so a match is found no
+  // matter where the user currently is. This fixes "search can't find my stamps"
+  // when the current view is a different collection or a category chip is active.
+  const _searching = !!(searchTerm && searchTerm.trim());
+  if (!_searching) {
+    if (selectedGroupId) {
+      items = items.filter(i=>i.groupId===selectedGroupId);
+    } else if (selectedCollectionId) {
+      const groupIds = db.groups.filter(g=>g.collectionId===selectedCollectionId).map(g=>g.id);
+      items = items.filter(i=>groupIds.includes(i.groupId));
+    }
+    if (filterCat!=='all') items = items.filter(i=>i.category===filterCat);
   }
-  if (filterCat!=='all') items = items.filter(i=>i.category===filterCat);
   if (searchTerm) {
     const s = searchTerm.toLowerCase().trim();
     const sNorm = s.replace(/[^a-z0-9]+/g,'');
