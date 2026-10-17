@@ -2033,11 +2033,17 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.7.0';             // semantic version — quote in bug reports
-const APP_VERSION_DATE = '2026-09-15';   // release date of this build
+const APP_VERSION = '1.8.0';             // semantic version — quote in bug reports
+const APP_VERSION_DATE = '2026-10-17';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.8.0', date:'17 Oct 2026', changes:[
+    'Setting up is now guided. Create a collection and Hoardr opens the group, then the first item, so you are taken straight through instead of starting on an empty screen.',
+    'You can add Hoardr to your home screen from Profile, under Get the app, for an app icon and a full screen view.',
+    'Photos are steadier. Saving no longer gets stuck on a photo it cannot read, and you can add the same photo again without it being skipped.',
+    'New condition grades for stamps (Used, Fine Used, Mint unhinged and more), plus more categories to choose from including trading cards, coins and comics.',
+  ]},
   { v:'1.7.0', date:'15 Sep 2026', changes:[
     'Pro members can now top up AI credits. If you use all your monthly AI actions, buy a one-off pack of 50 more for A$2.99. The extra credits never expire and are used automatically once your monthly allowance runs out. Buy them from Profile or when you hit the limit.',
   ]},
