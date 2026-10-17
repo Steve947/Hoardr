@@ -3468,17 +3468,28 @@ function openEditItem(id) {
 
 // Compress image to base64 using canvas
 function compressImage(file, maxWidth, quality) {
+  // Resolves to a base64 JPEG, or null if the image cannot be read/decoded.
+  // Every failure path (reader error, image decode error, canvas error, or a
+  // photo that silently never fires onload) resolves null instead of hanging,
+  // so the Save button can never be left spinning forever by a bad photo.
   return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+    const timer = setTimeout(() => finish(null), 15000);
     const reader = new FileReader();
+    reader.onerror = () => finish(null);
     reader.onload = ev => {
       const img = new Image();
+      img.onerror = () => finish(null);
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let w = img.width, h = img.height;
-        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        try {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          finish(canvas.toDataURL('image/jpeg', quality));
+        } catch (e) { finish(null); }
       };
       img.src = ev.target.result;
     };
@@ -3514,16 +3525,20 @@ async function saveItem() {
     }
 
     let photoUrls = [];
+    let _photoDropped = false;
     for (const p of editPhotoData) {
       if (!p) continue;
       if (p.isNew && p.file) {
         // New photos go to Storage as {thumb,url,path}; falls back to inline
-        // base64 on any failure so nothing is ever lost.
-        photoUrls.push(await uploadPhoto(p.file, itemId));
-      } else {
+        // base64 on any failure. A photo that cannot be read/decoded at all
+        // yields null — skip it so the item still saves (never hang the save).
+        const up = await uploadPhoto(p.file, itemId);
+        if (up) photoUrls.push(up); else _photoDropped = true;
+      } else if (p.url) {
         photoUrls.push(p.url);   // existing photo — round-tripped untouched
       }
     }
+    if (_photoDropped) showToast('A photo could not be read and was skipped','⚠️');
 
     const extraFields = [];
     document.querySelectorAll('.extra-field-row').forEach(row=>{
