@@ -3037,6 +3037,7 @@ async function saveCollection() {
   const name = document.getElementById('cName').value.trim();
   if (!name) { showToast('Please enter a collection name','⚠️'); return; }
   const id = document.getElementById('editCollectionId').value;
+  let _newCollId = '';
   if (!id && db.collections.length >= HARD_MAX_COLLECTIONS) {
     showToast(`You've reached the ${HARD_MAX_COLLECTIONS}-collection limit. Contact support if you need more.`,'⚠️'); return;
   }
@@ -3055,7 +3056,8 @@ async function saveCollection() {
       await firestoreDb.doc(`${userPath()}/collections/${id}`).update(data);
     } else {
       data.createdAt = new Date().toISOString();
-      await firestoreDb.collection(`${userPath()}/collections`).add(data);
+      const _cref = await firestoreDb.collection(`${userPath()}/collections`).add(data);
+      _newCollId = _cref.id;
     }
     setSyncStatus('synced');
   } else {
@@ -3063,12 +3065,35 @@ async function saveCollection() {
       const idx = db.collections.findIndex(c=>c.id===id);
       if (idx>=0) db.collections[idx] = {...db.collections[idx],...data};
     } else {
-      db.collections.push({id:uid(), ...data, createdAt:new Date().toISOString(), _open:true});
+      _newCollId = uid();
+      db.collections.push({id:_newCollId, ...data, createdAt:new Date().toISOString(), _open:true});
     }
     saveLocal(); render(); populateCollectionSelect();
   }
   closeModal('collectionModal');
   showToast('Collection saved','✓');
+  // Guided flow: after creating a NEW collection, continue straight into
+  // adding its first group, then its first item — so the user is never left
+  // on an empty screen hunting for the next step.
+  if (!id && _newCollId) {
+    setTimeout(()=>_chainToGroup(_newCollId, name), 180);
+  }
+}
+
+// ── Guided chain: new collection → new group → first item ──
+let _chainActive = false;
+function _chainToGroup(collId, collName){
+  _chainActive = true;
+  openGroupModal(null, collId);
+  // In cloud mode the realtime listener may not have added the new collection
+  // to the dropdown yet, so make sure its option exists and is selected.
+  const csel = document.getElementById('gCollection');
+  if (csel && collId) {
+    if (!Array.from(csel.options).some(o=>o.value===collId)) {
+      const o=document.createElement('option'); o.value=collId; o.textContent=collName||'New collection'; csel.appendChild(o);
+    }
+    csel.value = collId;
+  }
 }
 
 async function deleteCollection(id, e) {
@@ -3338,8 +3363,25 @@ async function saveGroup() {
     }
     saveLocal(); render(); populateGroupSelect();
   }
+  const _chainContinue = _chainActive && !id;
   closeModal('groupModal');
   showToast('Group saved','✓');
+  // Guided chain: a group created straight after a new collection → now open
+  // the Add Item form pre-set to this group, so the user lands on the final step.
+  if (_chainContinue) {
+    _chainActive = false;
+    selectedGroupId = newId;
+    setTimeout(()=>{
+      _openAddItemForm();
+      const gsel = document.getElementById('fGroup');
+      if (gsel && newId) {
+        if (!Array.from(gsel.options).some(o=>o.value===newId)) {
+          const o=document.createElement('option'); o.value=newId; o.textContent=name; gsel.appendChild(o);
+        }
+        gsel.value = newId;
+      }
+    }, 180);
+  }
   // If the group was created from inside the item form, refresh its dropdown and pick the new group
   if (_groupReturnToItem) {
     _groupReturnToItem = false;
@@ -6071,7 +6113,7 @@ window.addEventListener('keydown', function(e){
 function openPanel(id){ _openLayer(id, true); }
 function closePanel(id){ _closeLayer(id); }
 function openModal(id){ _openLayer(id, true); }
-function closeModal(id){ _closeLayer(id); }
+function closeModal(id){ if(id==='groupModal'||id==='collectionModal') _chainActive=false; _closeLayer(id); }
 function closeIfBg(e,id){ if(e.target.id===id) _closeLayer(id); }
 function ioMenuToggle(btn){ const m=btn.closest('.io-menu'); const wasOpen=m.classList.contains('open'); document.querySelectorAll('.io-menu.open').forEach(x=>x.classList.remove('open')); if(!wasOpen) m.classList.add('open'); }
 function ioMenuClose(){ document.querySelectorAll('.io-menu.open').forEach(x=>x.classList.remove('open')); }
