@@ -2035,11 +2035,14 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.8.0';             // semantic version — quote in bug reports
-const APP_VERSION_DATE = '2026-10-17';   // release date of this build
+const APP_VERSION = '1.9.0';             // semantic version — quote in bug reports
+const APP_VERSION_DATE = '2026-10-22';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.9.0', date:'22 Oct 2026', changes:[
+    'Collector badges have arrived. Earn them as your collection grows, for your first item, your first photo, reaching 10, 100 and 500 items, passing value goals, spreading across categories and more. See them all in the Dashboard, and watch for a pop when you unlock one.',
+  ]},
   { v:'1.8.0', date:'17 Oct 2026', changes:[
     'Setting up is now guided. Create a collection and Hoardr opens the group, then the first item, so you are taken straight through instead of starting on an empty screen.',
     'You can add Hoardr to your home screen from Profile, under Get the app, for an app icon and a full screen view.',
@@ -2449,6 +2452,63 @@ function _checkMilestones(){
       if(notifPrefs.enabled && notifPrefs.milestones!==false){ _notify('Hoardr milestone', hit.type==='count' ? (hit.t+' items catalogued — nice collection!') : ('Your collection just passed '+fmtMoney(hit.t)+'!')); }
     }
   }catch(e){ console.warn('milestone check failed:',e); }
+}
+
+// ── Collector badges ──────────────────────────────────────────────
+// Earned from the current collection (plus a couple of one-off flags).
+// Shown in the Dashboard; a new one earned on save pops a toast.
+function _badgeStats(){
+  const items=db.items||[];
+  let shared=false; try{ shared=localStorage.getItem('hoardrSharedOnce')==='1'; }catch(e){}
+  return {
+    items: items.length,
+    collections: (db.collections||[]).length,
+    groups: (db.groups||[]).length,
+    photos: items.reduce((a,i)=>a+((i.photos||[]).filter(p=>p).length),0),
+    value: items.reduce((a,i)=>a+(parseFloat(i.value)||0),0),
+    categories: new Set(items.map(i=>i.category).filter(Boolean)).size,
+    fiveStars: items.filter(i=>parseInt(i.rating)===5).length,
+    shared: shared
+  };
+}
+const BADGES=[
+  {id:'first-item',  icon:'🌱', title:'First Find',      hint:'Add your first item',        earned:s=>s.items>=1},
+  {id:'curator',     icon:'🗂️', title:'Curator',         hint:'Create a collection',         earned:s=>s.collections>=1},
+  {id:'photographer',icon:'📸', title:'Picture Perfect', hint:'Add a photo to an item',      earned:s=>s.photos>=1},
+  {id:'ten',         icon:'🔟', title:'Getting Serious', hint:'Catalogue 10 items',          earned:s=>s.items>=10},
+  {id:'fifty',       icon:'📦', title:'Shelf Filler',    hint:'Catalogue 50 items',          earned:s=>s.items>=50},
+  {id:'hundred',     icon:'💯', title:'Centurion',       hint:'Catalogue 100 items',         earned:s=>s.items>=100},
+  {id:'fivehundred', icon:'🏛️', title:'Archivist',       hint:'Catalogue 500 items',         earned:s=>s.items>=500},
+  {id:'organised',   icon:'🏷️', title:'Well Organised',  hint:'Use 5 groups',                earned:s=>s.groups>=5},
+  {id:'generalist',  icon:'🌈', title:'Generalist',      hint:'Collect across 5 categories', earned:s=>s.categories>=5},
+  {id:'topshelf',    icon:'⭐', title:'Top Shelf',       hint:'Give an item 5 stars',        earned:s=>s.fiveStars>=1},
+  {id:'treasure',    icon:'💎', title:'Treasure Trove',  hint:'Pass '+fmtMoney(10000)+' in value', earned:s=>s.value>=10000},
+  {id:'sharer',      icon:'🔗', title:'Show and Tell',   hint:'Share a collection or item',  earned:s=>s.shared}
+];
+function _earnedBadges(){ const s=_badgeStats(); return BADGES.filter(b=>{ try{ return b.earned(s); }catch(e){ return false; } }); }
+function _checkBadges(){
+  try{
+    const firstRun=(localStorage.getItem('hoardrBadges')===null);
+    let seen; try{ seen=new Set(JSON.parse(localStorage.getItem('hoardrBadges')||'[]')); }catch(e){ seen=new Set(); }
+    const earned=_earnedBadges().map(b=>b.id);
+    const fresh=earned.filter(id=>!seen.has(id));
+    earned.forEach(id=>seen.add(id));
+    try{ localStorage.setItem('hoardrBadges', JSON.stringify([...seen])); }catch(e){}
+    if(firstRun) return; // seed what is already earned silently; only future ones celebrate
+    if(fresh.length){ const b=BADGES.find(x=>x.id===fresh[0]); if(b) showToast('Badge unlocked: '+b.title+' '+b.icon,'🏅'); }
+  }catch(e){ console.warn('badge check failed:',e); }
+}
+function _badgesBlock(){
+  const earned=_earnedBadges(); const earnedIds=new Set(earned.map(b=>b.id));
+  const cell=(b,on)=>'<div title="'+escH(b.title+': '+b.hint)+'" style="display:flex;flex-direction:column;align-items:center;gap:3px;width:62px;text-align:center;opacity:'+(on?'1':'.3')+'">'
+    +'<div style="font-size:26px;filter:'+(on?'none':'grayscale(1)')+'">'+b.icon+'</div>'
+    +'<div style="font-size:9px;line-height:1.15;color:'+(on?'var(--gold2)':'var(--text3)')+'">'+escH(b.title)+'</div></div>';
+  return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:12px;color:var(--text3)">Collector badges</div>'
+    +'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--gold2)">'+earned.length+' / '+BADGES.length+'</div></div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">'
+    +BADGES.map(b=>cell(b,earnedIds.has(b.id))).join('')
+    +'</div></div>';
 }
 function maxPhotos(){ return isPro() ? PRO_MAX_PHOTOS : FREE_MAX_PHOTOS; }
 let editPhotoData = [];   // { url: <original photo value>, isNew: bool, file?: File }
@@ -3083,6 +3143,7 @@ async function saveCollection() {
   }
   closeModal('collectionModal');
   showToast('Collection saved','✓');
+  try{_checkBadges();}catch(e){}
   // Guided flow: after creating a NEW collection, continue straight into
   // adding its first group, then its first item — so the user is never left
   // on an empty screen hunting for the next step.
@@ -3249,6 +3310,8 @@ async function createShare(){
       +`<div style="display:flex;gap:6px"><input type="text" readonly value="${escH(url)}" style="flex:1;font-size:12px" onclick="this.select()">`
       +`<button class="btn btn-gold btn-sm" onclick="copyShareText('${escH(url)}')">Copy</button></div>`;
     renderSharesList();
+    try{ localStorage.setItem('hoardrSharedOnce','1'); }catch(e){}
+    try{ _checkBadges(); }catch(e){}
     showToast('Share link created','🔗');
   }catch(e){ console.warn('createShare failed',e); setSyncStatus('synced'); showToast('Could not create link — '+((e&&e.code)||'error'),'⚠️'); }
   finally{ btn.disabled=false; btn.textContent=ot; }
@@ -3377,6 +3440,7 @@ async function saveGroup() {
   const _chainContinue = _chainActive && !id;
   closeModal('groupModal');
   showToast('Group saved','✓');
+  try{_checkBadges();}catch(e){}
   // Guided chain: a group created straight after a new collection → now open
   // the Add Item form pre-set to this group, so the user lands on the final step.
   if (_chainContinue) {
@@ -3615,7 +3679,7 @@ async function saveItem() {
     }
     closePanel('itemOverlay');
     showToast(id ? 'Item updated ☁' : 'Item added ☁','✓');
-    _checkMilestones();
+    _checkMilestones(); _checkBadges();
   } catch(e) {
     showToast('Save failed: '+e.message,'⚠️');
   } finally {
@@ -5689,6 +5753,7 @@ async function showCollectionSummary() {
       </div>
       ${trend?`<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:10px"><div style="font-size:11px;color:var(--text3)">Value over time</div>${trend}</div>`:`<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;font-size:11px;color:var(--text3);text-align:center">📈 Your value-over-time chart starts building this month — reopen next month to see the trend.</div>`}
     </div>
+    ${_badgesBlock()}
     ${_catValueBars()}
     ${_topMovers()}
     ${_topItems()}
