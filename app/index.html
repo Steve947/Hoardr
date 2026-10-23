@@ -232,6 +232,10 @@ label.btn.btn-sm{font-size:12px}
 .af-sect.open>.af-sect-h .af-chev{transform:rotate(180deg)}
 .field-row{margin-bottom:14px}
 .field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.cf-chipwrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px}
+.cf-chip{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;transition:background .12s,border-color .12s,color .12s;user-select:none}
+.cf-chip:hover{border-color:var(--gold)}
+.cf-chip.on{background:rgba(201,168,76,.16);border-color:var(--gold);color:var(--text)}
 .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
 label{display:block;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
 input[type=text],input[type=date],input[type=number],input[type=email],input[type=password],select,textarea{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
@@ -4144,7 +4148,7 @@ const TRAIN_MAKES = ["Bachmann", "Hornby", "Lima", "Triang", "Triang Wrenn"];
 const TRAIN_TYPES = ["Passenger", "Freight", "Military", "Diesel", "Electric", "Steam"];
 const TRAIN_RAILWAYS = ["BR", "Comm", "GNR", "GWR", "LMS", "LNER", "NSWGR", "NSWR", "PR", "Private", "S&D.J.R", "SR", "TR", "VR", "WR"];
 const TRAIN_GAUGES = ["HO", "HO/OO", "OO"];
-const TRAIN_COLOURS = ["Black", "Blue", "Blue/Black", "Blue/Grey", "Blue/Yellow", "Crimson", "Green", "Green/Black", "Grey", "Maroon", "NSWR Candy", "Olive", "Olive Green", "Red", "Red/Black", "Red/Grey", "Silver/Red", "Swallow", "Swallow Grey", "Yellow"];
+const TRAIN_COLOURS = ["Apple Green", "Black", "Blood & Custard", "Blue", "Blue/Black", "Blue/Cream", "Blue/Grey", "Blue/Yellow", "Brown", "Brown/Grey", "Brunswick Green", "Caledonian Blue", "Chocolate", "Chocolate/Cream", "Cream", "Crimson", "Garter Blue", "Gold", "Green", "Green/Black", "Grey", "InterCity", "Maroon", "Maroon/Cream", "NSWR Candy", "Olive", "Olive Green", "Red", "Red/Black", "Red/Grey", "Red/White", "Red/Yellow/Blue", "Silver", "Silver/Red", "Swallow", "Swallow Grey", "Teak", "Tuscan Red", "White", "Yellow"];
 
 const DC_MODEL_MFRS = ["Agri", "Almost Real", "Atlas Copco", "Auto World", "AUTOart", "Bavarian Scalemodels", "BBR", "Bburago", "Bosinytoys", "Brumm", "Bugatti Automobiles", "CMC", "Conrad", "Conrad (4991 of  5000)", "Corgi", "Csichuan Changjiang", "Cursor", "Danbury Mint", "Diapet", "Die Cast Promotions", "Diecast Masters", "Dinky", "Drake", "Dynamic Acera", "Ertl", "Exoto", "First Gear", "Franklin Mint", "Gamma", "Gescha", "Gescha Conrad", "Greenlight", "GT Spirit", "Hartsmith", "Herpa", "Hongwell(Caramara)", "Hot Wheels", "Iconic Replicas", "Ixo", "Jada Toys", "Joal", "Johnny Lightning", "King Equipment", "Kyosho", "LookSmart", "M2 Machines", "Maisto", "Majorette", "Matchbox", "MatchBox Collectibles", "Mattel", "Mini GT", "Minichamps", "Minimac", "Motorart", "Motormax", "Norev", "Norscot", "NZG", "Otto Mobile", "Oxford Diecast", "Polistil", "Racing Champions", "ROS", "Ros", "Schuco", "Sennebogen", "Shinsei", "Shinsei?", "Siku", "Smart Toys", "Solido", "Spark", "SpecCast", "Sun Star", "Sword Models", "Tamiya", "Tarmac Works", "Tecnomodel", "Tomica", "Tonkin Replicas", "Tonkin Replicas Precision", "Tonkin Replicas Signature", "Trofeu", "TWH Collectables", "TWH Collectibles", "Universal Hobbies", "Vitesse", "Welly", "Wiking", "WSI Models", "Yat Ming", "Yonezawa Diapet"];
 const DC_EQUIP_MFRS = ["Abarth", "AC", "Alfa Romeo", "Allis Chalmers", "Ammann", "Aston Martin", "Atlas Copco", "Audi", "Austin", "Bell", "Bentley", "BMW", "Bobcat", "Bucyrus", "Bucyrus Erie", "Bugatti", "Buick", "Cadillac", "Case", "Case Construction", "Case International", "Caterpillar", "Chevrolet", "Chevrolet Truck LQ", "Chrysler", "Churchill Military", "Citroen", "Clark", "CPG", "Datsun", "De Tomaso", "Demag", "Dodge", "Drake", "Dresser", "Esco", "Euclid", "Ferrari", "Fiat", "Ford", "Ford Model A", "Ford Model T", "Freighter", "Freightliner", "Fuchs", "GMC", "Gottwald", "Grove", "Hanomag", "Hitachi", "Holden", "Honda", "Hyundai", "Ingersoll Rand", "International", "Jaguar", "Jeep", "John Deere", "Jonyang", "Kaidiwei", "Kato", "Kawasaki", "Kenworth", "Kenworth(Bowers)", "Kenworth(Toll)", "Kobelco", "Koenigsegg", "Komatsu", "Komatsu Haulpak #495", "Lamborghini", "Lancia", "Land Rover", "LeTourneau", "Lexus", "Liebherr", "Link-Belt", "Lotus", "Mack", "Mack(Bowers)", "Mack(RW Miller)", "Maserati", "Massey Ferguson", "Mavac", "Mazda", "McLaren", "Menck", "Mercedes-Benz", "MG", "Michigan", "Michigan(Clark)", "Mini", "Mitsubishi", "Morris", "Moxy", "Moxy(Komatsu)", "New Holland", "Nissan", "Northwest Engineering", "O&K", "Oldsmobile", "Opel", "P&H", "Pagani", "Peterbilt", "Peugeot", "Plymouth", "Pontiac", "Porsche", "PPM", "RAC & AA", "Renault", "Roadtec", "Rolls-Royce", "Rover", "Ruston Bucyrus", "Saab", "Seat", "Sennebogen", "Shelby", "Shuttlelift", "Skoda", "Sterling", "Subaru", "Sumitomo", "Suzuki", "Tadano", "Taxi", "Terex", "Tesla", "Toll", "Tonkin Replicas", "Toyota", "Triumph", "Vauxhall", "Vermeer", "Volkswagen", "Volvo", "Volvo BM", "Wabco Haulpak", "Wesehutte", "Western Star", "Wirtgen", "Zeppelin"];
@@ -4210,7 +4214,7 @@ const CAT_FIELDS = {
     {key:'train_wheel',label:'Wheel Arrangement',placeholder:'e.g. 4-6-2'},
     {key:'train_name',label:'Loco Name',placeholder:'e.g. Lady Patricia'},
     {key:'train_running_no',label:'Running Number',placeholder:'e.g. 46210'},
-    {key:'train_colour',label:'Livery Colour',placeholder:'e.g. Green',type:'select',opts:TRAIN_COLOURS},
+    {key:'train_colour',label:'Livery Colour',placeholder:'e.g. Green',type:'multiselect',opts:TRAIN_COLOURS},
     {key:'train_year',label:'Year / Era',placeholder:'e.g. 1989-91'},
     {key:'train_box',label:'Original Box',placeholder:'Y / N',type:'select',opts:['Y','N']},
   ]
@@ -4225,6 +4229,12 @@ function updateCatFields(){
     +_acHtml
     +chunk(fields,2).map(row=>`<div class="field-row-${row.length===1?'1':'2'}" style="${row.length===1?'margin-bottom:14px':''}">
       ${row.map(f=>{
+        if(f.type==='multiselect'&&f.opts){
+          const chips=f.opts.map(o=>{const ov=escH(String(o));return `<button type="button" class="cf-chip" data-val="${ov}" onclick="_cfMultiToggle('${f.key}',this)">${ov}</button>`;}).join('');
+          return `<div style="grid-column:1/-1"><label>${f.label} <span style="color:var(--text3);font-weight:400;font-size:11px">(tap to select one or more)</span></label>
+            <input type="hidden" data-catfield="${f.key}" id="cf_${f.key}">
+            <div class="cf-chipwrap" data-catmulti="${f.key}">${chips}</div></div>`;
+        }
         if(f.type==='select'&&f.opts){
           const opts=f.opts.map(o=>`<option value="${escH(String(o))}">${escH(String(o))}</option>`).join('');
           return `<div><label>${f.label}</label><select data-catfield="${f.key}" id="cf_${f.key}"><option value="">— Select —</option>${opts}</select></div>`;
@@ -4235,8 +4245,24 @@ function updateCatFields(){
   if(cat==='Diecast') _wireCatalogAC();
 }
 function restoreCatFields(item){
-  if(!item.catFieldVals)return;
+  if(!item.catFieldVals){_cfSyncMultis();return;}
   Object.entries(item.catFieldVals).forEach(([k,v])=>{const el=document.getElementById('cf_'+k);if(el)el.value=v||'';});
+  _cfSyncMultis();
+}
+function _cfMultiToggle(key, btn){ btn.classList.toggle('on'); _cfMultiCommit(key); }
+function _cfMultiCommit(key){
+  const wrap=document.querySelector('[data-catmulti="'+key+'"]'); if(!wrap) return;
+  const vals=[...wrap.querySelectorAll('.cf-chip.on')].map(b=>b.dataset.val);
+  const hid=document.getElementById('cf_'+key); if(hid) hid.value=vals.join(', ');
+}
+function _cfSyncMultis(){
+  document.querySelectorAll('[data-catmulti]').forEach(wrap=>{
+    const key=wrap.getAttribute('data-catmulti');
+    const hid=document.getElementById('cf_'+key);
+    const cur=((hid&&hid.value)?hid.value:'').split(',').map(s=>s.trim()).filter(Boolean);
+    const set=new Set(cur.map(s=>s.toLowerCase()));
+    wrap.querySelectorAll('.cf-chip').forEach(b=>{ b.classList.toggle('on', set.has((b.dataset.val||'').toLowerCase())); });
+  });
 }
 function chunk(arr,size){const r=[];for(let i=0;i<arr.length;i+=size)r.push(arr.slice(i,i+size));return r;}
 
