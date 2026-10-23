@@ -5600,6 +5600,28 @@ function _snapSparkline(snaps){
     +dots+'</svg>'
     +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px"><span>'+escH(pts[0].month)+'</span><span>'+escH(pts[n-1].month)+'</span></div>';
 }
+let _lastSnaps=[], _trendRange='all';
+function _rangeCut(range){
+  const n = range==='3m'?3 : range==='6m'?6 : range==='12m'?12 : 0;
+  if(!n) return null;
+  const d=new Date(); d.setUTCMonth(d.getUTCMonth()-(n-1));
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+}
+function _trendBlock(){
+  const all=(_lastSnaps||[]).filter(s=>s&&s.totalValue!=null&&!isNaN(s.totalValue));
+  if(all.length<2) return '<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;font-size:11px;color:var(--text3);text-align:center">📈 Your value-over-time chart starts building this month — reopen next month to see the trend.</div>';
+  const cut=_rangeCut(_trendRange);
+  const pts=cut?all.filter(s=>String(s.month)>=cut):all;
+  const svg=_snapSparkline(pts);
+  const btns=[['all','All'],['3m','3M'],['6m','6M'],['12m','1Y']].map(function(r){
+    const on=_trendRange===r[0];
+    return '<button type="button" onclick="_setTrendRange(\''+r[0]+'\')" style="background:'+(on?'rgba(201,168,76,.18)':'none')+';border:1px solid '+(on?'var(--gold)':'var(--border)')+';color:'+(on?'var(--gold2)':'var(--text3)')+';border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer">'+r[1]+'</button>';
+  }).join('');
+  const header='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:2px"><div style="font-size:11px;color:var(--text3)">Value over time</div><div style="display:flex;gap:4px">'+btns+'</div></div>';
+  const inner=svg||'<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">Not enough data points in this range yet.</div>';
+  return '<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:10px">'+header+inner+'</div>';
+}
+function _setTrendRange(r){ _trendRange=r; const c=document.getElementById('trendWrap'); if(c) c.innerHTML=_trendBlock(); }
 function _catValueBars(){
   const m={}; db.items.forEach(i=>{ const v=parseFloat(i.value)||0; if(v>0){ const c=i.category||'Uncategorised'; m[c]=(m[c]||0)+v; } });
   const rows=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,6);
@@ -5642,7 +5664,7 @@ async function showCollectionSummary() {
   openPanel('summaryOverlay');
   await _writeMonthlySnapshot();
   const snaps = await _loadSnapshots();
-  const trend = _snapSparkline(snaps);
+  _lastSnaps = snaps;
 
   let html = `<div style="padding:4px">
     <div style="background:linear-gradient(135deg,var(--surface2),var(--surface3));border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:14px">
@@ -5656,7 +5678,7 @@ async function showCollectionSummary() {
         <div><div style="font-family:'IBM Plex Mono',monospace;font-size:18px;color:var(--text)">${db.collections.length}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Collections</div></div>
         <div><div style="font-family:'IBM Plex Mono',monospace;font-size:18px;color:var(--rust2)">${fmtMoney(grandCost)}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Total cost</div></div>
       </div>
-      ${trend?`<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:10px"><div style="font-size:11px;color:var(--text3)">Value over time</div>${trend}</div>`:`<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;font-size:11px;color:var(--text3);text-align:center">📈 Your value-over-time chart starts building this month — reopen next month to see the trend.</div>`}
+      <div id="trendWrap">${_trendBlock()}</div>
     </div>
     ${_catValueBars()}
     ${_topMovers()}
