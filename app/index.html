@@ -973,7 +973,11 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <div><label>Obtained From</label><input type="text" id="fObtainedFrom" placeholder="e.g. Auction, Estate Sale"></div>
         </div>
         <div class="field-row-2">
-          <div><label id="lblPurchase">Purchase Price ($)</label><input type="number" id="fPurchasePrice" placeholder="0.00" step="0.01"></div>
+          <div><label id="lblPurchase">Purchase Price ($)</label><input type="number" id="fPurchasePrice" placeholder="0.00" step="0.01" oninput="_updateCostTotal()"></div>
+          <div><label id="lblPostage">Postage ($)</label><input type="number" id="fPostage" placeholder="0.00" step="0.01" oninput="_updateCostTotal()"></div>
+        </div>
+        <div class="field-row-2">
+          <div><label>Total Cost (price + postage)</label><input type="text" id="fTotalCost" disabled style="opacity:.7" placeholder="—"></div>
           <div><label>Seller / Dealer</label><input type="text" id="fSeller" placeholder="Name or business"></div>
         </div>
         <div class="field-row"><label>Location / Provenance</label><input type="text" id="fProvenance" placeholder="Where is it from?"></div>
@@ -1868,7 +1872,7 @@ function aiFillApply(){
 
 // ── AI Smart Import — import from anything (spreadsheet, Word, PDF, image, or pasted text); owner-only ──
 let _smartImport=null;
-const _SI_CORE={'Item Name':'name','Short Description':'shortDesc','Condition':'condition','Material':'material','Estimated Value':'value','Purchase Price':'purchasePrice','Seller':'seller','Obtained From':'obtainedFrom','Date Obtained':'obtainedDate','Provenance':'provenance','Cert/Ref #':'certRef','Insurance':'insurance','Quantity':'quantity','Rating':'rating','Tags':'tags','Full Notes':'notes','History':'history'};
+const _SI_CORE={'Item Name':'name','Short Description':'shortDesc','Condition':'condition','Material':'material','Estimated Value':'value','Purchase Price':'purchasePrice','Postage':'postage','Seller':'seller','Obtained From':'obtainedFrom','Date Obtained':'obtainedDate','Provenance':'provenance','Cert/Ref #':'certRef','Insurance':'insurance','Quantity':'quantity','Rating':'rating','Tags':'tags','Full Notes':'notes','History':'history'};
 function _siNum(v){ const n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?'':String(n); }
 function _siCatalog(){ const c={}; Object.keys(CAT_FIELDS).forEach(k=>c[k]=CAT_FIELDS[k].map(f=>f.label)); return c; }
 function _siGuard(){ if(!isAiAlpha()){ showToast('Smart Import is in limited testing','🔒'); return false;} if(!fnSvc){ showToast('AI unavailable — reload and try again','⚠️'); return false;} return true; }
@@ -2009,19 +2013,19 @@ function _renderSmartImport(){
   _siRenderPreview();
 }
 function _siItemFromValues(values,category){
-  const item={name:'',category:category,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
+  const item={name:'',category:category,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',postage:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
   const cfBy={}; if(category&&CAT_FIELDS[category]) CAT_FIELDS[category].forEach(f=>cfBy[f.label]=f.key);
   Object.keys(values||{}).forEach(label=>{ let v=values[label]; v=(v==null?'':String(v)).trim(); if(!v)return;
-    if(_SI_CORE[label]){ const k=_SI_CORE[label]; if(k==='value'||k==='purchasePrice')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
+    if(_SI_CORE[label]){ const k=_SI_CORE[label]; if(k==='value'||k==='purchasePrice'||k==='postage')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
     else if(cfBy[label]) item.catFieldVals[cfBy[label]]=v; });
   if(!item.name){ const parts=Object.values(item.catFieldVals).filter(Boolean).slice(0,3); item.name=parts.join(' ').trim(); }
   return item;
 }
 function _siBuildItem(row){
-  const s=_smartImport; const cat=s.category; const item={name:'',category:cat,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
+  const s=_smartImport; const cat=s.category; const item={name:'',category:cat,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',postage:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
   const cfBy={}; if(cat) CAT_FIELDS[cat].forEach(f=>cfBy[f.label]=f.key);
   s.headers.forEach(h=>{ const t=s.mapping[h]; if(!t||t==='ignore')return; let v=row[h]; v=(v==null?'':String(v)).trim();
-    if(_SI_CORE[t]){ const k=_SI_CORE[t]; if(k==='value'||k==='purchasePrice')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
+    if(_SI_CORE[t]){ const k=_SI_CORE[t]; if(k==='value'||k==='purchasePrice'||k==='postage')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
     else if(cfBy[t]) item.catFieldVals[cfBy[t]]=v; });
   if(!item.name){ const parts=Object.values(item.catFieldVals).filter(Boolean).slice(0,3); item.name=parts.join(' ').trim(); }
   return item;
@@ -2205,9 +2209,14 @@ let userCurrency=(function(){ try{ return localStorage.getItem('hoardrCurrency')
 function curCode(){ return userCurrency||'AUD'; }
 function curSym(){ const c=CURRENCIES.find(x=>x.code===curCode()); return c?c.sym:'$'; }
 function fmtMoney(n){ return curSym()+(Number(n)||0).toFixed(2); }
+// Full cost of an item: a diecast total-cost field if set, else purchase price + postage.
+function _itemCost(i){ if(i&&i.catFieldVals&&i.catFieldVals.dc_total_cost_aud!=null&&String(i.catFieldVals.dc_total_cost_aud).trim()!=='') return parseFloat(i.catFieldVals.dc_total_cost_aud)||0; return (parseFloat(i&&i.purchasePrice)||0)+(parseFloat(i&&i.postage)||0); }
+// Live Total Cost shown in the item form as price + postage are typed.
+function _updateCostTotal(){ const p=parseFloat((document.getElementById('fPurchasePrice')||{}).value)||0; const s=parseFloat((document.getElementById('fPostage')||{}).value)||0; const el=document.getElementById('fTotalCost'); if(el) el.value=(p||s)?fmtMoney(p+s):''; }
 function applyCurrencyLabels(){
   const a=document.getElementById('lblValue'); if(a) a.textContent='Estimated Value ('+curSym()+')';
   const b=document.getElementById('lblPurchase'); if(b) b.textContent='Purchase Price ('+curSym()+')';
+  const bp=document.getElementById('lblPostage'); if(bp) bp.textContent='Postage ('+curSym()+')';
 }
 function setCurrency(code,persist){
   userCurrency=code||'AUD';
@@ -3530,8 +3539,9 @@ function openEditItem(id) {
   clearItemForm();
   document.getElementById('panelTitle').textContent = 'Edit Item';
   document.getElementById('editId').value = id;
-  const fields = ['Name','Material','ObtainedDate','ObtainedFrom','PurchasePrice','Seller','Provenance','CertRef','Insurance','ShortDesc','Notes','History','Tags'];
+  const fields = ['Name','Material','ObtainedDate','ObtainedFrom','PurchasePrice','Postage','Seller','Provenance','CertRef','Insurance','ShortDesc','Notes','History','Tags'];
   fields.forEach(f => { const el = document.getElementById('f'+f); if(el) el.value = item[f.charAt(0).toLowerCase()+f.slice(1)]||''; });
+  _updateCostTotal();
   setCategoryField(item.category||'');
   updateConditionOptions(item.condition||'');
   document.getElementById('fGroup').value = item.groupId||'';
@@ -3672,6 +3682,7 @@ async function saveItem() {
       obtainedDate: document.getElementById('fObtainedDate').value,
       obtainedFrom: document.getElementById('fObtainedFrom').value,
       purchasePrice: document.getElementById('fPurchasePrice').value,
+      postage: document.getElementById('fPostage').value,
       seller: document.getElementById('fSeller').value,
       provenance: document.getElementById('fProvenance').value,
       certRef: document.getElementById('fCertRef').value,
@@ -3762,6 +3773,7 @@ function duplicateItem(id) {
   document.getElementById('fObtainedDate').value = copy.obtainedDate||'';
   document.getElementById('fObtainedFrom').value = copy.obtainedFrom||'';
   document.getElementById('fPurchasePrice').value = copy.purchasePrice||'';
+  document.getElementById('fPostage').value = copy.postage||''; _updateCostTotal();
   document.getElementById('fSeller').value = copy.seller||'';
   document.getElementById('fProvenance').value = copy.provenance||'';
   document.getElementById('fCertRef').value = copy.certRef||'';
@@ -4049,6 +4061,8 @@ function viewItem(id) {
       ${item.obtainedDate?`<div class="detail-field"><div class="detail-field-label">Date Obtained</div><div class="detail-field-value">${item.obtainedDate}</div></div>`:''}
       ${item.obtainedFrom?`<div class="detail-field"><div class="detail-field-label">Obtained From</div><div class="detail-field-value">${escH(item.obtainedFrom)}</div></div>`:''}
       ${item.purchasePrice?`<div class="detail-field"><div class="detail-field-label">Purchase Price</div><div class="detail-field-value">${fmtMoney(item.purchasePrice)}</div></div>`:''}
+      ${item.postage?`<div class="detail-field"><div class="detail-field-label">Postage</div><div class="detail-field-value">${fmtMoney(item.postage)}</div></div>`:''}
+      ${(item.purchasePrice||item.postage)?`<div class="detail-field"><div class="detail-field-label">Total Cost</div><div class="detail-field-value">${fmtMoney((parseFloat(item.purchasePrice)||0)+(parseFloat(item.postage)||0))}</div></div>`:''}
       ${item.seller?`<div class="detail-field"><div class="detail-field-label">Seller</div><div class="detail-field-value">${escH(item.seller)}</div></div>`:''}
       ${item.provenance?`<div class="detail-field"><div class="detail-field-label">Provenance</div><div class="detail-field-value">${escH(item.provenance)}</div></div>`:''}
       ${item.certRef?`<div class="detail-field"><div class="detail-field-label">Cert / Ref #</div><div class="detail-field-value">${escH(item.certRef)}</div></div>`:''}
@@ -4699,7 +4713,7 @@ async function exportExcel(){
 
   // ── One sheet per Collection — clean item data, no raw base64 ──
   const COL_HDR=['#','Item Name','Qty','Category','Group','Condition','Material','Dimensions',
-    'Est. Value ('+curCode()+')','Purchase Price ('+curCode()+')','Date Obtained','Obtained From',
+    'Est. Value ('+curCode()+')','Purchase Price ('+curCode()+')','Postage ('+curCode()+')','Total Cost ('+curCode()+')','Date Obtained','Obtained From',
     'Seller','Provenance','Cert/Ref #','Short Description','Notes','History',
     'Tags','Rating','Insurance','Photos'];
 
@@ -4726,6 +4740,7 @@ async function exportExcel(){
           item.condition||'',item.material||'',dimStr(item),
           item.value?parseFloat(item.value):'',
           item.purchasePrice?parseFloat(item.purchasePrice):'',
+          item.postage?parseFloat(item.postage):'',(_itemCost(item)||''),
           item.obtainedDate||'',item.obtainedFrom||'',
           item.seller||'',item.provenance||'',item.certRef||'',
           item.shortDesc||'',item.notes||'',item.history||'',
@@ -4746,7 +4761,7 @@ async function exportExcel(){
 
   // ── All Items flat sheet ──────────────────────────────────────
   const allHdr=['#','Collection','Group','Item Name','Qty','Category','Condition','Material','Dimensions',
-    'Est. Value ('+curCode()+')','Purchase Price ('+curCode()+')','Date Obtained','Obtained From','Seller',
+    'Est. Value ('+curCode()+')','Purchase Price ('+curCode()+')','Postage ('+curCode()+')','Total Cost ('+curCode()+')','Date Obtained','Obtained From','Seller',
     'Provenance','Cert/Ref #','Short Description','Notes','History','Tags','Rating','Insurance','Photos'];
   const allRows=[allHdr];
   let seq2=0;
@@ -4759,6 +4774,7 @@ async function exportExcel(){
           item.condition||'',item.material||'',dimStr(item),
           item.value?parseFloat(item.value):'',
           item.purchasePrice?parseFloat(item.purchasePrice):'',
+          item.postage?parseFloat(item.postage):'',(_itemCost(item)||''),
           item.obtainedDate||'',item.obtainedFrom||'',item.seller||'',
           item.provenance||'',item.certRef||'',item.shortDesc||'',
           item.notes||'',item.history||'',item.tags||'',
@@ -4831,7 +4847,7 @@ async function exportInsuranceReport(){
   const cut=(t,n)=>{t=String(t||''); return t.length>n?t.substring(0,n-1)+'…':t;};
   const photoCountOf=i=>(i.photos||[]).filter(p=>p).length;
   const sumVal=arr=>arr.reduce((a,i)=>a+(parseFloat(i.value)||0),0);
-  const sumCost=arr=>arr.reduce((a,i)=>a+(parseFloat(i.purchasePrice)||0),0);
+  const sumCost=arr=>arr.reduce((a,i)=>a+_itemCost(i),0);
 
   // Collection > Group > Items — every item must appear exactly once
   const sections=[]; const assigned=new Set();
@@ -5007,7 +5023,7 @@ async function exportInsuranceReport(){
         doc.text(pdfTxt(cut(it.condition,9)),CX.cond,y+4.2);
         doc.text(cut(it.obtainedDate,11),CX.acq,y+4.2);
         doc.text(pdfTxt(cut(it.certRef,13)),CX.ref,y+4.2);
-        doc.text(money(it.purchasePrice),CX.cost,y+4.2,{align:'right'});
+        doc.text(money(_itemCost(it)),CX.cost,y+4.2,{align:'right'});
         doc.text(money(it.value),CX.val,y+4.2,{align:'right'});
         if(photoCountOf(it)){ doc.setTextColor(140,110,40); doc.text('A-'+no,CX.photo,y+4.2); }
         else { doc.setTextColor(165,158,145); doc.text('—',CX.photo,y+4.2); }
@@ -5418,7 +5434,7 @@ function getCollectionSummary() {
     const cGroups = db.groups.filter(g => g.collectionId === col.id);
     const cItems = cGroups.reduce((a, g) => a.concat(db.items.filter(i => i.groupId === g.id)), []);
     const totalValue = cItems.reduce((a, i) => a + parseFloat(i.value || 0), 0);
-    const totalCost = cItems.reduce((a, i) => a + parseFloat(i.catFieldVals && i.catFieldVals.dc_total_cost_aud ? i.catFieldVals.dc_total_cost_aud : (i.purchasePrice || 0)), 0);
+    const totalCost = cItems.reduce((a, i) => a + _itemCost(i), 0);
     const withPhotos = cItems.filter(i => (i.photos || []).filter(p => p).length > 0).length;
     summary[col.id] = {
       name: col.name,
@@ -5435,7 +5451,7 @@ function getCollectionSummary() {
           itemCount: gItems.length,
           pieceCount: gItems.reduce((a,i)=>a+qtyOf(i),0),
           totalValue: gItems.reduce((a, i) => a + parseFloat(i.value || 0), 0),
-          totalCost: gItems.reduce((a, i) => a + parseFloat(i.catFieldVals && i.catFieldVals.dc_total_cost_aud ? i.catFieldVals.dc_total_cost_aud : (i.purchasePrice || 0)), 0),
+          totalCost: gItems.reduce((a, i) => a + _itemCost(i), 0),
         };
       })
     };
@@ -5447,7 +5463,7 @@ function getCollectionSummary() {
     itemCount: ungrouped.length,
     pieceCount: ungrouped.reduce((a,i)=>a+qtyOf(i),0),
     totalValue: ungrouped.reduce((a, i) => a + parseFloat(i.value || 0), 0),
-    totalCost: ungrouped.reduce((a, i) => a + parseFloat(i.purchasePrice || 0), 0),
+    totalCost: ungrouped.reduce((a, i) => a + _itemCost(i), 0),
     groups: []
   };
   return summary;
@@ -5458,7 +5474,7 @@ async function _writeMonthlySnapshot(){
   if(!(firebaseMode && currentUser)) return;
   try{
     const tv=db.items.reduce((a,i)=>a+(parseFloat(i.value)||0),0);
-    const tc=db.items.reduce((a,i)=>{ const c=(i.catFieldVals&&i.catFieldVals.dc_total_cost_aud)?parseFloat(i.catFieldVals.dc_total_cost_aud):parseFloat(i.purchasePrice||0); return a+(c||0); },0);
+    const tc=db.items.reduce((a,i)=>a+_itemCost(i),0);
     const km=_monthKey();
     await firestoreDb.doc(`${userPath()}/snapshots/${km}`).set({ month:km, totalValue:Math.round(tv*100)/100, totalCost:Math.round(tc*100)/100, itemCount:db.items.length, currency:(typeof curCode==='function'?curCode():'AUD'), at:new Date().toISOString() },{merge:true});
   }catch(e){ console.warn('snapshot write failed (non-fatal):', e); }
@@ -5625,7 +5641,7 @@ async function saveLocally() {
       totalItems: db.items.length,
       totalCollections: db.collections.length,
       totalGroups: db.groups.length,
-      grandTotalCostAUD: db.items.reduce((a, i) => a + parseFloat(i.catFieldVals && i.catFieldVals.dc_total_cost_aud ? i.catFieldVals.dc_total_cost_aud : (i.purchasePrice || 0)), 0).toFixed(2),
+      grandTotalCostAUD: db.items.reduce((a, i) => a + _itemCost(i), 0).toFixed(2),
       grandEstValue: db.items.reduce((a, i) => a + parseFloat(i.value || 0), 0).toFixed(2)
     }
   };
@@ -6065,7 +6081,7 @@ function populateGroupSelect(){
   sel.value=cur;
 }
 function clearItemForm(){
-  ['fName','fMaterial','fMaterialCustom','fValue','fHeight','fWidth','fObtainedDate','fObtainedFrom','fPurchasePrice','fSeller',
+  ['fName','fMaterial','fMaterialCustom','fValue','fHeight','fWidth','fObtainedDate','fObtainedFrom','fPurchasePrice','fPostage','fTotalCost','fSeller',
    'fProvenance','fCertRef','fInsurance','fShortDesc','fNotes','fHistory','fTags'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
