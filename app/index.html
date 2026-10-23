@@ -1304,6 +1304,18 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
   </div>
 </div>
 
+<!-- GROUP PICKER (move to group) -->
+<div class="modal-overlay" id="grpPickerModal" onclick="closeIfBg(event,'grpPickerModal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="grpPickerTitle">Move to group</div>
+    <div class="field-row"><input type="text" id="grpPickerSearch" placeholder="Search groups…" oninput="_renderGrpPicker()" autocomplete="off"></div>
+    <div id="grpPickerList" style="max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:4px 0;border:1px solid var(--line,rgba(255,255,255,.1));border-radius:10px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('grpPickerModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toastIcon">✓</span><span id="toastMsg">Saved</span><button id="toastAction" onclick="toastActionClick()" style="display:none;background:var(--gold);color:#1a1200;border:none;border-radius:5px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px">Undo</button></div>
 
@@ -4125,7 +4137,7 @@ function setHero(i,el){var ps=window.__itemPhotos||[];var im=document.getElement
 // CAT-SPECIFIC FIELDS
 // ═══════════════════════════════════════════════════════════
 const TRAIN_MAKES = ["Bachmann", "Hornby", "Lima", "Triang", "Triang Wrenn"];
-const TRAIN_TYPES = ["Diesel", "Electric", "Steam"];
+const TRAIN_TYPES = ["Passenger", "Freight", "Military", "Diesel", "Electric", "Steam"];
 const TRAIN_RAILWAYS = ["BR", "Comm", "GNR", "GWR", "LMS", "LNER", "NSWGR", "NSWR", "PR", "Private", "S&D.J.R", "SR", "TR", "VR", "WR"];
 const TRAIN_GAUGES = ["HO", "HO/OO", "OO"];
 const TRAIN_COLOURS = ["Black", "Blue", "Blue/Black", "Blue/Yellow", "Crimson", "Green", "Green/Black", "Grey", "Maroon", "NSWR Candy", "Olive", "Olive Green", "Red", "Red/Black", "Red/Grey", "Silver/Red", "Swallow", "Swallow Grey", "Yellow"];
@@ -4187,7 +4199,7 @@ const CAT_FIELDS = {
     {key:'train_my_no',label:'My Reference No',placeholder:'e.g. L001'},
     {key:'train_part_no',label:'Part Number',placeholder:'e.g. R3231'},
     {key:'train_make',label:'Make / Manufacturer',placeholder:'e.g. Hornby',type:'select',opts:TRAIN_MAKES},
-    {key:'train_type',label:'Loco Type',placeholder:'e.g. Steam',type:'select',opts:TRAIN_TYPES},
+    {key:'train_type',label:'Rolling Stock Type',placeholder:'e.g. Passenger, Steam',type:'select',opts:TRAIN_TYPES},
     {key:'train_gauge',label:'Gauge',placeholder:'e.g. OO',type:'select',opts:TRAIN_GAUGES},
     {key:'train_railway',label:'Railway',placeholder:'e.g. BR, GWR',type:'select',opts:TRAIN_RAILWAYS},
     {key:'train_class',label:'Class',placeholder:'e.g. Princess, Class 08'},
@@ -4452,16 +4464,40 @@ async function bulkRestore(items){
   } else { items.forEach(it=>db.items.push(it)); saveLocal(); render(); }
   showToast(`${items.length} item(s) restored`,'↩');
 }
+let _grpPickerIds=[];
 function bulkMove(){
   const ids=[...selectedIds]; if(!ids.length) return;
   const groups=alphaSort(db.groups);
   if(!groups.length){ showToast('Create a group first','⚠️'); return; }
-  const list=groups.map((g,i)=>`${i+1}. ${g.name}`).join('\n');
-  const choice=prompt(`Move ${ids.length} item(s) to which group?\n\n${list}\n\nType the number:`);
-  if(choice===null) return;
-  const idx=parseInt(choice)-1;
-  if(isNaN(idx)||idx<0||idx>=groups.length){ showToast('Invalid choice','⚠️'); return; }
-  doBulkMove(ids, groups[idx].id);
+  _grpPickerIds=ids;
+  const t=document.getElementById('grpPickerTitle'); if(t) t.textContent=`Move ${ids.length} item(s) to…`;
+  const s=document.getElementById('grpPickerSearch'); if(s) s.value='';
+  _renderGrpPicker();
+  openModal('grpPickerModal');
+  setTimeout(()=>{ try{ const s2=document.getElementById('grpPickerSearch'); if(s2) s2.focus(); }catch(e){} }, 60);
+}
+function _grpColName(g){
+  const c=(db.collections||[]).find(c=>c.id===g.collectionId);
+  return c?c.name:'';
+}
+function _renderGrpPicker(){
+  const box=document.getElementById('grpPickerList'); if(!box) return;
+  const q=(document.getElementById('grpPickerSearch')?.value||'').trim().toLowerCase();
+  let groups=alphaSort(db.groups);
+  if(q) groups=groups.filter(g=>((g.name||'')+' '+_grpColName(g)).toLowerCase().includes(q));
+  if(!groups.length){ box.innerHTML='<div style="padding:16px;text-align:center;color:var(--text2);font-size:13px">No matching groups</div>'; return; }
+  box.innerHTML=groups.map(g=>{
+    const col=_grpColName(g);
+    const sub=col?`<div style="font-size:11px;color:var(--text2);margin-top:1px">${escH(col)}</div>`:'';
+    const ic=g.icon?`<span style="margin-right:7px">${escH(g.icon)}</span>`:'';
+    return `<button type="button" onclick="_pickGroup('${g.id}')" style="display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line,rgba(255,255,255,.07));padding:11px 13px;cursor:pointer;color:var(--text,inherit);font-size:14px">${ic}${escH(g.name)}${sub}</button>`;
+  }).join('');
+}
+function _pickGroup(gid){
+  const ids=_grpPickerIds.slice();
+  closeModal('grpPickerModal');
+  if(!ids.length) return;
+  doBulkMove(ids, gid);
 }
 async function doBulkMove(ids, gid){
   if(firebaseMode){
