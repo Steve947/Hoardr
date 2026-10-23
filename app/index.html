@@ -1988,7 +1988,7 @@ function _renderSmartImport(){
   let html='<div class="field-row"><label>Category</label><select id="siCat" onchange="_siSetCat(this.value)"><option value="">— none (core fields only) —</option>'
     + cats.map(c=>'<option value="'+escH(c)+'"'+(c===s.category?' selected':'')+'>'+escH(c)+'</option>').join('')+'</select></div>';
   // ── Destination: existing or new collection, existing or new group ──
-  const d = s.dest || (s.dest = {col:'', colName:'Imported: '+(s.fname||'list'), grp:'__new__', grpName:'Imported items'});
+  const d = s.dest || (s.dest = {col:'', colName:'Imported: '+(s.fname||'list'), grp:'', grpName:'Imported items'});
   const _cols = db.collections || [];
   html += '<div class="section-heading">Destination</div>';
   html += '<div class="field-row"><label>Collection</label><select id="siDestCol" onchange="_siSetDest()">'
@@ -2002,10 +2002,14 @@ function _renderSmartImport(){
     html += '<div class="field-row"><label>New group name</label><input id="siDestGrpName" value="'+escH(d.grpName||'Imported items')+'" placeholder="e.g. Rolling Stock"></div>';
   } else {
     const _grps = (db.groups||[]).filter(g=>g.collectionId===d.col);
-    const _grpNew = (d.grp==='__new__' || !_grps.some(g=>g.id===d.grp));
+    const _grpExists = _grps.some(g=>g.id===d.grp);
+    const _grpNew = (d.grp==='__new__');
+    const _grpSel = (_grpExists||_grpNew) ? d.grp : '';
     html += '<div class="field-row"><label>Group</label><select id="siDestGrp" onchange="_siSetDest()">'
-      + _grps.map(g=>'<option value="'+escH(g.id)+'"'+(d.grp===g.id?' selected':'')+'>'+escH(g.name)+'</option>').join('')
+      + '<option value=""'+(_grpSel===''?' selected':'')+'>— Select group —</option>'
+      + _grps.map(g=>'<option value="'+escH(g.id)+'"'+(_grpSel===g.id?' selected':'')+'>'+escH(g.name)+'</option>').join('')
       + '<option value="__new__"'+(_grpNew?' selected':'')+'>➕ New group…</option></select></div>';
+    if(_grpSel==='') html += '<p style="font-size:12px;color:var(--text3);margin:2px 0 4px">Choose an existing group, or pick "New group" to create one.</p>';
     if(_grpNew) html += '<div class="field-row"><label>New group name</label><input id="siDestGrpName" value="'+escH(d.grpName||'Imported items')+'" placeholder="e.g. Rolling Stock"></div>';
   }
   if(s.kind==='table'){
@@ -2076,6 +2080,7 @@ async function smartImportApply(){
   _siCaptureDest();
   const d=_smartImport.dest||{};
   if(!d.col){ showToast('Choose a collection first','⚠️'); return; }
+  if(d.col!=='__new__' && !d.grp){ showToast('Choose a group first','⚠️'); return; }
   const useExistingCol = !!(d.col && d.col!=='__new__');
   const newColName = (String(d.colName||'').trim()) || ('Imported: '+(s.fname||'list'));
   const useExistingGrp = useExistingCol && !!(d.grp && d.grp!=='__new__');
