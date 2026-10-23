@@ -2604,7 +2604,14 @@ async function uploadPhoto(file, itemId, fallbackB64){
   // fallbackB64: the data URL already read when the photo was added. If the File
   // handle has gone stale (common on mobile for a re-picked same-named file) and
   // cannot be re-read here, we store that captured copy so the photo is never lost.
-  const legacy = async () => { const b = await compressImage(file, 800, 0.65); return b || fallbackB64 || null; };
+  const legacy = async () => {
+    const b = await compressImage(file, 800, 0.65);
+    if (b) return b;
+    // File handle unreadable here (stale on mobile). Shrink the copy captured at
+    // add time so an inline save stays well under the per-item size limit.
+    if (fallbackB64) return await compressDataUrl(fallbackB64, 1000, 0.68);
+    return null;
+  };
   if(!firebaseMode || !storage || !currentUser || !itemId) return await legacy();
   const v = await makePhotoVariants(file);
   if(!v || !v.blob) return await legacy();
@@ -3481,6 +3488,28 @@ function openEditItem(id) {
 }
 
 // Compress image to base64 using canvas
+// Shrink an already-read data URL (no File handle needed, so it works even when
+// the original File has gone stale). Resolves to a smaller base64 JPEG, or null.
+function compressDataUrl(dataUrl, maxWidth, quality) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+    const timer = setTimeout(() => finish(null), 15000);
+    const img = new Image();
+    img.onerror = () => finish(null);
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        finish(canvas.toDataURL('image/jpeg', quality));
+      } catch (e) { finish(null); }
+    };
+    img.src = dataUrl;
+  });
+}
 function compressImage(file, maxWidth, quality) {
   // Resolves to a base64 JPEG, or null if the image cannot be read/decoded.
   // Every failure path (reader error, image decode error, canvas error, or a
