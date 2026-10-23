@@ -1868,7 +1868,7 @@ function aiFillApply(){
 
 // ── AI Smart Import — import from anything (spreadsheet, Word, PDF, image, or pasted text); owner-only ──
 let _smartImport=null;
-const _SI_CORE={'Item Name':'name','Condition':'condition','Material':'material','Estimated Value':'value','Quantity':'quantity','Short Description':'shortDesc','Full Notes':'notes'};
+const _SI_CORE={'Item Name':'name','Short Description':'shortDesc','Condition':'condition','Material':'material','Estimated Value':'value','Purchase Price':'purchasePrice','Seller':'seller','Obtained From':'obtainedFrom','Date Obtained':'obtainedDate','Provenance':'provenance','Cert/Ref #':'certRef','Insurance':'insurance','Quantity':'quantity','Rating':'rating','Tags':'tags','Full Notes':'notes','History':'history'};
 function _siNum(v){ const n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?'':String(n); }
 function _siCatalog(){ const c={}; Object.keys(CAT_FIELDS).forEach(k=>c[k]=CAT_FIELDS[k].map(f=>f.label)); return c; }
 function _siGuard(){ if(!isAiAlpha()){ showToast('Smart Import is in limited testing','🔒'); return false;} if(!fnSvc){ showToast('AI unavailable — reload and try again','⚠️'); return false;} return true; }
@@ -1986,7 +1986,7 @@ function _siItemFromValues(values,category){
   const item={name:'',category:category,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
   const cfBy={}; if(category&&CAT_FIELDS[category]) CAT_FIELDS[category].forEach(f=>cfBy[f.label]=f.key);
   Object.keys(values||{}).forEach(label=>{ let v=values[label]; v=(v==null?'':String(v)).trim(); if(!v)return;
-    if(_SI_CORE[label]){ const k=_SI_CORE[label]; if(k==='value')item.value=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else item[k]=v; }
+    if(_SI_CORE[label]){ const k=_SI_CORE[label]; if(k==='value'||k==='purchasePrice')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
     else if(cfBy[label]) item.catFieldVals[cfBy[label]]=v; });
   if(!item.name){ const parts=Object.values(item.catFieldVals).filter(Boolean).slice(0,3); item.name=parts.join(' ').trim(); }
   return item;
@@ -1995,7 +1995,7 @@ function _siBuildItem(row){
   const s=_smartImport; const cat=s.category; const item={name:'',category:cat,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
   const cfBy={}; if(cat) CAT_FIELDS[cat].forEach(f=>cfBy[f.label]=f.key);
   s.headers.forEach(h=>{ const t=s.mapping[h]; if(!t||t==='ignore')return; let v=row[h]; v=(v==null?'':String(v)).trim();
-    if(_SI_CORE[t]){ const k=_SI_CORE[t]; if(k==='value')item.value=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else item[k]=v; }
+    if(_SI_CORE[t]){ const k=_SI_CORE[t]; if(k==='value'||k==='purchasePrice')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
     else if(cfBy[t]) item.catFieldVals[cfBy[t]]=v; });
   if(!item.name){ const parts=Object.values(item.catFieldVals).filter(Boolean).slice(0,3); item.name=parts.join(' ').trim(); }
   return item;
