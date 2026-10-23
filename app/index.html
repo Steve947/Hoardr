@@ -232,10 +232,17 @@ label.btn.btn-sm{font-size:12px}
 .af-sect.open>.af-sect-h .af-chev{transform:rotate(180deg)}
 .field-row{margin-bottom:14px}
 .field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.cf-chipwrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px}
-.cf-chip{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;transition:background .12s,border-color .12s,color .12s;user-select:none}
-.cf-chip:hover{border-color:var(--gold)}
-.cf-chip.on{background:rgba(201,168,76,.16);border-color:var(--gold);color:var(--text)}
+.msel{position:relative}
+.msel-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px;cursor:pointer;text-align:left;margin-top:4px}
+.msel-trigger:hover{border-color:var(--gold)}
+.msel-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;color:var(--text)}
+.msel-caret{color:var(--text3);font-size:12px;flex:0 0 auto}
+.msel-panel{display:none;position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:200;background:var(--surface2);border:1px solid var(--gold);border-radius:10px;max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.msel-panel.open{display:block}
+.msel-opt{display:flex;align-items:center;gap:9px;padding:9px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--line,rgba(255,255,255,.06));margin:0}
+.msel-opt:last-child{border-bottom:none}
+.msel-opt:hover{background:rgba(201,168,76,.08)}
+.msel-opt input{width:16px;height:16px;flex:0 0 auto;accent-color:var(--gold);margin:0}
 .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
 label{display:block;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
 input[type=text],input[type=date],input[type=number],input[type=email],input[type=password],select,textarea{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
@@ -4230,10 +4237,11 @@ function updateCatFields(){
     +chunk(fields,2).map(row=>`<div class="field-row-${row.length===1?'1':'2'}" style="${row.length===1?'margin-bottom:14px':''}">
       ${row.map(f=>{
         if(f.type==='multiselect'&&f.opts){
-          const chips=f.opts.map(o=>{const ov=escH(String(o));return `<button type="button" class="cf-chip" data-val="${ov}" onclick="_cfMultiToggle('${f.key}',this)">${ov}</button>`;}).join('');
-          return `<div style="grid-column:1/-1"><label>${f.label} <span style="color:var(--text3);font-weight:400;font-size:11px">(tap to select one or more)</span></label>
+          const boxes=f.opts.map(o=>{const ov=escH(String(o));return `<label class="msel-opt"><input type="checkbox" value="${ov}" onchange="_mselCommit('${f.key}')"><span>${ov}</span></label>`;}).join('');
+          return `<div class="msel" data-msel="${f.key}"><label>${f.label} <span style="color:var(--text3);font-weight:400;font-size:11px">(select one or more)</span></label>
             <input type="hidden" data-catfield="${f.key}" id="cf_${f.key}">
-            <div class="cf-chipwrap" data-catmulti="${f.key}">${chips}</div></div>`;
+            <button type="button" class="msel-trigger" id="cf_${f.key}_trig" onclick="_mselToggle('${f.key}',event)"><span class="msel-lbl">— Select —</span><span class="msel-caret">▾</span></button>
+            <div class="msel-panel" id="cf_${f.key}_panel">${boxes}</div></div>`;
         }
         if(f.type==='select'&&f.opts){
           const opts=f.opts.map(o=>`<option value="${escH(String(o))}">${escH(String(o))}</option>`).join('');
@@ -4245,25 +4253,38 @@ function updateCatFields(){
   if(cat==='Diecast') _wireCatalogAC();
 }
 function restoreCatFields(item){
-  if(!item.catFieldVals){_cfSyncMultis();return;}
+  if(!item.catFieldVals){_mselSync();return;}
   Object.entries(item.catFieldVals).forEach(([k,v])=>{const el=document.getElementById('cf_'+k);if(el)el.value=v||'';});
-  _cfSyncMultis();
+  _mselSync();
 }
-function _cfMultiToggle(key, btn){ btn.classList.toggle('on'); _cfMultiCommit(key); }
-function _cfMultiCommit(key){
-  const wrap=document.querySelector('[data-catmulti="'+key+'"]'); if(!wrap) return;
-  const vals=[...wrap.querySelectorAll('.cf-chip.on')].map(b=>b.dataset.val);
+function _mselToggle(key, ev){
+  if(ev){ ev.stopPropagation(); }
+  const panel=document.getElementById('cf_'+key+'_panel'); if(!panel) return;
+  const open=panel.classList.contains('open');
+  document.querySelectorAll('.msel-panel.open').forEach(p=>p.classList.remove('open'));
+  if(!open){ panel.classList.add('open'); }
+}
+function _mselCommit(key){
+  const panel=document.getElementById('cf_'+key+'_panel'); if(!panel) return;
+  const vals=[...panel.querySelectorAll('input[type=checkbox]:checked')].map(b=>b.value);
   const hid=document.getElementById('cf_'+key); if(hid) hid.value=vals.join(', ');
+  const lbl=document.querySelector('#cf_'+key+'_trig .msel-lbl'); if(lbl) lbl.textContent=vals.length?vals.join(', '):'— Select —';
 }
-function _cfSyncMultis(){
-  document.querySelectorAll('[data-catmulti]').forEach(wrap=>{
-    const key=wrap.getAttribute('data-catmulti');
+function _mselSync(){
+  document.querySelectorAll('[data-msel]').forEach(wrap=>{
+    const key=wrap.getAttribute('data-msel');
     const hid=document.getElementById('cf_'+key);
     const cur=((hid&&hid.value)?hid.value:'').split(',').map(s=>s.trim()).filter(Boolean);
     const set=new Set(cur.map(s=>s.toLowerCase()));
-    wrap.querySelectorAll('.cf-chip').forEach(b=>{ b.classList.toggle('on', set.has((b.dataset.val||'').toLowerCase())); });
+    const panel=document.getElementById('cf_'+key+'_panel');
+    if(panel) panel.querySelectorAll('input[type=checkbox]').forEach(b=>{ b.checked=set.has((b.value||'').toLowerCase()); });
+    _mselCommit(key);
   });
 }
+document.addEventListener('click',function(e){
+  if(e.target.closest && e.target.closest('.msel')) return;
+  document.querySelectorAll('.msel-panel.open').forEach(p=>p.classList.remove('open'));
+});
 function chunk(arr,size){const r=[];for(let i=0;i<arr.length;i+=size)r.push(arr.slice(i,i+size));return r;}
 
 // ── Mining reference catalogue autocomplete (Diecast add/edit) ──
