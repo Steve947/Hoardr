@@ -4447,23 +4447,25 @@ function renderCatChips(){
   custom.forEach(c=>{ if(!customCats.some(x=>(x&&(x.name||x))===c)){ customCats.push({name:c,emoji:''}); _newCust=true; } });
   if(_newCust){ sortCustomCats(); persistCustomCats(); refreshCategoryOptions(); }
   const cats=BUILTIN.concat(custom);
-  let html=`<button class="tag" data-cat="all" onclick="filterByCat(this.dataset.cat)">All</button>`;
+  let html=`<select id="catFilterSel" onchange="filterByCat(this.value)" style="width:100%;box-sizing:border-box">`;
+  html+=`<option value="all"${filterCat==='all'?' selected':''}>🗂 All categories</option>`;
   cats.forEach(c=>{
     const label=catEmoji(c)+' '+(META[c]||c);
-    html+=`<span class="tag-wrap" style="display:inline-flex;align-items:center">`
-      +`<button class="tag" data-cat="${escH(c)}" onclick="filterByCat(this.dataset.cat)">${escH(label)}</button>`
-      +`<button class="cat-edit" data-cat="${escH(c)}" title="Edit category" onclick="event.stopPropagation();openCategoryModal(this.dataset.cat)" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;padding:0 4px;margin-left:-2px">✏</button>`
-      +`</span>`;
+    html+=`<option value="${escH(c)}"${filterCat===c?' selected':''}>${escH(label)}</option>`;
   });
+  html+=`</select>`;
+  html+=`<button class="btn btn-outline btn-sm" id="catFilterEdit" onclick="_editSelectedCat()" style="width:100%;box-sizing:border-box;justify-content:center;margin-top:6px">✏ Edit category</button>`;
   box.innerHTML=html;
   highlightCatChip();
 }
+function _editSelectedCat(){
+  const sel=document.getElementById('catFilterSel'); const c=sel?sel.value:filterCat;
+  if(!c||c==='all'){ showToast('Pick a category to edit','✏'); return; }
+  openCategoryModal(c);
+}
 function highlightCatChip(){
-  document.querySelectorAll('#catChips .tag').forEach(t=>{
-    const on=t.dataset.cat===filterCat;
-    t.style.borderColor=on?'var(--gold)':'';
-    t.style.color=on?'var(--gold2)':'';
-  });
+  const sel=document.getElementById('catFilterSel'); if(sel && sel.value!==filterCat) sel.value=filterCat;
+  const eb=document.getElementById('catFilterEdit'); if(eb){ const on=filterCat&&filterCat!=='all'; eb.style.opacity=on?'1':'.5'; }
 }
 function filterItems(){searchTerm=document.getElementById('searchInput').value;render();}
 function sortBy(key){if(sortKey===key)sortDir*=-1;else{sortKey=key;sortDir=1;}render();}
