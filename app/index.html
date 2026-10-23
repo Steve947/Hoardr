@@ -2600,8 +2600,11 @@ function makePhotoVariants(file){
 // Upload one new photo. Returns {thumb,url,path} on success, or a plain base64
 // string on ANY failure (offline, rules, quota) so a photo is never lost —
 // the dual-read layer handles both shapes, so a fallback is invisible.
-async function uploadPhoto(file, itemId){
-  const legacy = () => compressImage(file, 800, 0.65);
+async function uploadPhoto(file, itemId, fallbackB64){
+  // fallbackB64: the data URL already read when the photo was added. If the File
+  // handle has gone stale (common on mobile for a re-picked same-named file) and
+  // cannot be re-read here, we store that captured copy so the photo is never lost.
+  const legacy = async () => { const b = await compressImage(file, 800, 0.65); return b || fallbackB64 || null; };
   if(!firebaseMode || !storage || !currentUser || !itemId) return await legacy();
   const v = await makePhotoVariants(file);
   if(!v || !v.blob) return await legacy();
@@ -3543,7 +3546,7 @@ async function saveItem() {
         // New photos go to Storage as {thumb,url,path}; falls back to inline
         // base64 on any failure. A photo that cannot be read/decoded at all
         // yields null — skip it so the item still saves (never hang the save).
-        const up = await uploadPhoto(p.file, itemId);
+        const up = await uploadPhoto(p.file, itemId, p.url);
         if (up) photoUrls.push(up); else _photoDropped = true;
       } else if (p.url) {
         photoUrls.push(p.url);   // existing photo — round-tripped untouched
@@ -4206,6 +4209,7 @@ function handlePhotoUpload(e){
   files.forEach(file=>{
     const reader=new FileReader();
     const wasFirst=_first; _first=false;
+    reader.onerror=()=>{ showToast('Could not read that photo, please try again','⚠️'); };
     reader.onload=ev=>{
       editPhotoData.push({url:ev.target.result, isNew:true, file});
       renderPhotoGrid();
@@ -4213,7 +4217,9 @@ function handlePhotoUpload(e){
     };
     reader.readAsDataURL(file);
   });
-  e.target.value='';
+  // The input is reset in _pickPhoto() BEFORE the picker opens, so it is NOT
+  // cleared here. Clearing it mid-read on mobile releases the file handle for a
+  // re-picked same-named file, so the read returns empty and the decode fails.
 }
 function renderPhotoGrid(){
   const grid=document.getElementById('photoGrid');
