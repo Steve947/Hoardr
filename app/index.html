@@ -2596,6 +2596,32 @@ function makePhotoVariants(file){
     reader.readAsDataURL(file);
   });
 }
+// Same as makePhotoVariants but from an already-read data URL (no File handle).
+// Lets mobile build its cloud-storage upload from the copy captured at add time,
+// when the original file handle has gone stale by save time.
+function makePhotoVariantsFromDataUrl(dataUrl){
+  return new Promise(resolve=>{
+    let done=false; const finish=v=>{ if(!done){ done=true; clearTimeout(t); resolve(v); } };
+    const t=setTimeout(()=>finish(null),15000);
+    const img=new Image();
+    img.onerror=()=>finish(null);
+    img.onload=()=>{
+      const scaled=maxDim=>{
+        let w=img.width,h=img.height;
+        const sc=Math.min(1,maxDim/Math.max(w,h));
+        w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        return c;
+      };
+      let thumb='';
+      try{ thumb=scaled(PHOTO_THUMB_PX).toDataURL('image/jpeg',PHOTO_THUMB_Q); }catch(e){ finish(null); return; }
+      try{ scaled(PHOTO_FULL_PX).toBlob(b=>finish(b?{blob:b,thumb}:null),'image/jpeg',PHOTO_FULL_Q); }
+      catch(e){ finish(null); }
+    };
+    img.src=dataUrl;
+  });
+}
 
 // Upload one new photo. Returns {thumb,url,path} on success, or a plain base64
 // string on ANY failure (offline, rules, quota) so a photo is never lost —
@@ -2613,7 +2639,11 @@ async function uploadPhoto(file, itemId, fallbackB64){
     return null;
   };
   if(!firebaseMode || !storage || !currentUser || !itemId) return await legacy();
-  const v = await makePhotoVariants(file);
+  let v = await makePhotoVariants(file);
+  // On mobile the File handle can be stale by now; rebuild the upload from the
+  // copy captured at add time so the photo still goes to cloud storage, the same
+  // as on a laptop. Inline save stays only as a last resort below.
+  if((!v || !v.blob) && fallbackB64) v = await makePhotoVariantsFromDataUrl(fallbackB64);
   if(!v || !v.blob) return await legacy();
   try{
     const path = `users/${currentUser.uid}/items/${itemId}/${uid()}.jpg`;
