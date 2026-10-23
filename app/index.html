@@ -1947,11 +1947,37 @@ function _siFromSpreadsheet(buf,fname){
 }
 function _siTargets(){ const s=_smartImport; const cf=s.category?CAT_FIELDS[s.category].map(f=>f.label):[]; return ['ignore'].concat(s.coreFields||Object.keys(_SI_CORE)).concat(cf); }
 function _siCapture(){ if(_smartImport&&_smartImport.kind==='table') document.querySelectorAll('#smartImportBody [data-simap]').forEach(sel=>{ _smartImport.mapping[sel.getAttribute('data-simap')]=sel.value; }); }
-function _siSetCat(v){ _siCapture(); _smartImport.category=v; _renderSmartImport(); }
+function _siSetCat(v){ _siCapture(); _siCaptureDest(); _smartImport.category=v; _renderSmartImport(); }
+function _siCaptureDest(){
+  if(!_smartImport) return; const d=_smartImport.dest||(_smartImport.dest={});
+  const cs=document.getElementById('siDestCol'); if(cs) d.col=cs.value;
+  const cn=document.getElementById('siDestColName'); if(cn) d.colName=cn.value;
+  const gs=document.getElementById('siDestGrp'); if(gs) d.grp=gs.value;
+  const gn=document.getElementById('siDestGrpName'); if(gn) d.grpName=gn.value;
+}
+function _siSetDest(){ _siCapture(); _siCaptureDest(); _renderSmartImport(); }
 function _renderSmartImport(){
   const s=_smartImport; const body=document.getElementById('smartImportBody'); const cats=Object.keys(CAT_FIELDS);
   let html='<div class="field-row"><label>Category</label><select id="siCat" onchange="_siSetCat(this.value)"><option value="">— none (core fields only) —</option>'
     + cats.map(c=>'<option value="'+escH(c)+'"'+(c===s.category?' selected':'')+'>'+escH(c)+'</option>').join('')+'</select></div>';
+  // ── Destination: existing or new collection, existing or new group ──
+  const d = s.dest || (s.dest = {col:'__new__', colName:'Imported: '+(s.fname||'list'), grp:'__new__', grpName:'Imported items'});
+  const _cols = db.collections || [];
+  html += '<div class="section-heading">Destination</div>';
+  html += '<div class="field-row"><label>Collection</label><select id="siDestCol" onchange="_siSetDest()">'
+    + _cols.map(c=>'<option value="'+escH(c.id)+'"'+(d.col===c.id?' selected':'')+'>'+escH(c.name)+'</option>').join('')
+    + '<option value="__new__"'+(d.col==='__new__'?' selected':'')+'>➕ New collection…</option></select></div>';
+  if(d.col==='__new__'){
+    html += '<div class="field-row"><label>New collection name</label><input id="siDestColName" value="'+escH(d.colName||('Imported: '+(s.fname||'list')))+'" placeholder="e.g. Model Trains"></div>';
+    html += '<div class="field-row"><label>New group name</label><input id="siDestGrpName" value="'+escH(d.grpName||'Imported items')+'" placeholder="e.g. Rolling Stock"></div>';
+  } else {
+    const _grps = (db.groups||[]).filter(g=>g.collectionId===d.col);
+    const _grpNew = (d.grp==='__new__' || !_grps.some(g=>g.id===d.grp));
+    html += '<div class="field-row"><label>Group</label><select id="siDestGrp" onchange="_siSetDest()">'
+      + _grps.map(g=>'<option value="'+escH(g.id)+'"'+(d.grp===g.id?' selected':'')+'>'+escH(g.name)+'</option>').join('')
+      + '<option value="__new__"'+(_grpNew?' selected':'')+'>➕ New group…</option></select></div>';
+    if(_grpNew) html += '<div class="field-row"><label>New group name</label><input id="siDestGrpName" value="'+escH(d.grpName||'Imported items')+'" placeholder="e.g. Rolling Stock"></div>';
+  }
   if(s.kind==='table'){
     const targets=_siTargets();
     html+='<div class="section-heading">Column mapping</div><p style="font-size:12px;color:var(--text3);margin-bottom:8px">'+s.rows.length+' rows found. Check each column maps to the right field.</p>';
@@ -2017,21 +2043,31 @@ async function smartImportApply(){
     if(items.length>room){ _held=items.length-room; items=items.slice(0,room); }
     if(!items.length){ showToast('Your free plan is full ('+FREE_MAX_ITEMS+' items). Upgrade to Pro to import.','🔒'); try{openUpgrade();}catch(_){} return; }
   }
-  const colName='Imported: '+(s.fname||'list');
+  _siCaptureDest();
+  const d=_smartImport.dest||{};
+  const useExistingCol = !!(d.col && d.col!=='__new__');
+  const newColName = (String(d.colName||'').trim()) || ('Imported: '+(s.fname||'list'));
+  const useExistingGrp = useExistingCol && !!(d.grp && d.grp!=='__new__');
+  const newGrpName = (String(d.grpName||'').trim()) || 'Imported items';
+  const destName = useExistingCol ? (((db.collections||[]).find(c=>c.id===d.col)||{}).name || newColName) : newColName;
   const btn=document.getElementById('siImportBtn'); const orig=btn?btn.textContent:''; if(btn){btn.disabled=true; btn.textContent='Importing…';}
   const now=()=>new Date().toISOString();
   try{
     if(firebaseMode){ setSyncStatus('syncing');
-      const colRef=await firestoreDb.collection(userPath()+'/collections').add({name:colName, category:s.category||'', icon:'📦', desc:'Imported via AI Smart Import', createdAt:now(), updatedAt:now()});
-      const grpRef=await firestoreDb.collection(userPath()+'/groups').add({name:'Imported items', category:s.category||'', icon:'📦', desc:'', collectionId:colRef.id, createdAt:now(), updatedAt:now()});
-      for(let i=0;i<items.length;i+=400){ const b=firestoreDb.batch(); items.slice(i,i+400).forEach(it=>{ const ref=firestoreDb.collection(userPath()+'/items').doc(); b.set(ref, Object.assign({},it,{groupId:grpRef.id,createdAt:now(),updatedAt:now()})); }); await b.commit(); }
+      let colId = useExistingCol ? d.col : null;
+      if(!colId){ const colRef=await firestoreDb.collection(userPath()+'/collections').add({name:newColName, category:s.category||'', icon:'📦', desc:'Imported via AI Smart Import', createdAt:now(), updatedAt:now()}); colId=colRef.id; }
+      let grpId = useExistingGrp ? d.grp : null;
+      if(!grpId){ const grpRef=await firestoreDb.collection(userPath()+'/groups').add({name:newGrpName, category:s.category||'', icon:'📦', desc:'', collectionId:colId, createdAt:now(), updatedAt:now()}); grpId=grpRef.id; }
+      for(let i=0;i<items.length;i+=400){ const b=firestoreDb.batch(); items.slice(i,i+400).forEach(it=>{ const ref=firestoreDb.collection(userPath()+'/items').doc(); b.set(ref, Object.assign({},it,{groupId:grpId,createdAt:now(),updatedAt:now()})); }); await b.commit(); }
       setSyncStatus('synced');
     } else {
-      const colId=uid(); db.collections.push({id:colId,name:colName,category:s.category||'',icon:'📦',desc:'Imported via AI Smart Import',createdAt:now(),_open:true});
-      const grpId=uid(); db.groups.push({id:grpId,name:'Imported items',collectionId:colId,category:s.category||'',icon:'📦',desc:'',createdAt:now(),_open:true});
+      let colId = useExistingCol ? d.col : null;
+      if(!colId){ colId=uid(); db.collections.push({id:colId,name:newColName,category:s.category||'',icon:'📦',desc:'Imported via AI Smart Import',createdAt:now(),_open:true}); }
+      let grpId = useExistingGrp ? d.grp : null;
+      if(!grpId){ grpId=uid(); db.groups.push({id:grpId,name:newGrpName,collectionId:colId,category:s.category||'',icon:'📦',desc:'',createdAt:now(),_open:true}); }
       items.forEach(it=>db.items.push(Object.assign({id:uid()},it,{groupId:grpId,createdAt:now()}))); saveLocal(); render();
     }
-    closePanel('smartImportOverlay'); showToast('Imported '+items.length+' items into "'+colName+'"'+(_held>0?('. '+_held+' held, upgrade to Pro to add them'):''),'✓');
+    closePanel('smartImportOverlay'); showToast('Imported '+items.length+' items into "'+destName+'"'+(_held>0?('. '+_held+' held, upgrade to Pro to add them'):''),'✓');
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
