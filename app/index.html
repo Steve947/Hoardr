@@ -1977,13 +1977,16 @@ function _renderSmartImport(){
   let html='<div class="field-row"><label>Category</label><select id="siCat" onchange="_siSetCat(this.value)"><option value="">— none (core fields only) —</option>'
     + cats.map(c=>'<option value="'+escH(c)+'"'+(c===s.category?' selected':'')+'>'+escH(c)+'</option>').join('')+'</select></div>';
   // ── Destination: existing or new collection, existing or new group ──
-  const d = s.dest || (s.dest = {col:'__new__', colName:'Imported: '+(s.fname||'list'), grp:'__new__', grpName:'Imported items'});
+  const d = s.dest || (s.dest = {col:'', colName:'Imported: '+(s.fname||'list'), grp:'__new__', grpName:'Imported items'});
   const _cols = db.collections || [];
   html += '<div class="section-heading">Destination</div>';
   html += '<div class="field-row"><label>Collection</label><select id="siDestCol" onchange="_siSetDest()">'
+    + '<option value="">— Select collection —</option>'
     + _cols.map(c=>'<option value="'+escH(c.id)+'"'+(d.col===c.id?' selected':'')+'>'+escH(c.name)+'</option>').join('')
     + '<option value="__new__"'+(d.col==='__new__'?' selected':'')+'>➕ New collection…</option></select></div>';
-  if(d.col==='__new__'){
+  if(!d.col){
+    html += '<p style="font-size:12px;color:var(--text3);margin:2px 0 4px">Choose an existing collection, or pick "New collection" to create one.</p>';
+  } else if(d.col==='__new__'){
     html += '<div class="field-row"><label>New collection name</label><input id="siDestColName" value="'+escH(d.colName||('Imported: '+(s.fname||'list')))+'" placeholder="e.g. Model Trains"></div>';
     html += '<div class="field-row"><label>New group name</label><input id="siDestGrpName" value="'+escH(d.grpName||'Imported items')+'" placeholder="e.g. Rolling Stock"></div>';
   } else {
@@ -2061,6 +2064,7 @@ async function smartImportApply(){
   }
   _siCaptureDest();
   const d=_smartImport.dest||{};
+  if(!d.col){ showToast('Choose a collection first','⚠️'); return; }
   const useExistingCol = !!(d.col && d.col!=='__new__');
   const newColName = (String(d.colName||'').trim()) || ('Imported: '+(s.fname||'list'));
   const useExistingGrp = useExistingCol && !!(d.grp && d.grp!=='__new__');
