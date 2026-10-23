@@ -5633,10 +5633,7 @@ async function showCollectionSummary() {
   const totalItems = db.items.length;
   const totalPieces = db.items.reduce((a,i)=>a+qtyOf(i),0);
   const grandValue = db.items.reduce((a, i) => a + parseFloat(i.value || 0), 0);
-  const grandCost = db.items.reduce((a, i) => {
-    const cost = i.catFieldVals && i.catFieldVals.dc_total_cost_aud ? parseFloat(i.catFieldVals.dc_total_cost_aud) : parseFloat(i.purchasePrice || 0);
-    return a + cost;
-  }, 0);
+  const grandCost = db.items.reduce((a, i) => a + _itemCost(i), 0);
   const gain = grandValue - grandCost;
   const gainPct = grandCost>0 ? (gain/grandCost*100) : 0;
   const up = gain>=0;
