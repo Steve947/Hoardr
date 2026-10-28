@@ -3273,7 +3273,7 @@ function buildCollectionSnapshot(collectionId, showValue, showPrice){
     type:'collection', collectionId:collectionId, subjectKey:'col:'+collectionId,
     title:col.name||'Collection', icon:col.icon||'', description:col.desc||'',
     ownerUid:(typeof currentUser!=='undefined'&&currentUser&&currentUser.uid)||'',
-    ownerName:(typeof currentUser!=='undefined'&&currentUser&&(currentUser.displayName||((currentUser.email||'').split('@')[0])))||'A collector',
+    ownerName:(typeof currentUser!=='undefined'&&currentUser&&currentUser.displayName)||'A collector',
     showValue:!!showValue, showPrice:!!showPrice,
     stats:{ items:items.length, groups:groups.length },
     groups: groups.map(g=>({ name:g.name||'', icon:g.icon||'', category:g.category||'',
@@ -3289,7 +3289,7 @@ function buildItemsSnapshot(itemIds, showValue, showPrice){
   return {
     type:'items', title:title, icon:(items.length===1?(catEmoji(items[0].category)||'📦'):'🗂'), description:'',
     ownerUid:(typeof currentUser!=='undefined'&&currentUser&&currentUser.uid)||'',
-    ownerName:(typeof currentUser!=='undefined'&&currentUser&&(currentUser.displayName||((currentUser.email||'').split('@')[0])))||'A collector',
+    ownerName:(typeof currentUser!=='undefined'&&currentUser&&currentUser.displayName)||'A collector',
     showValue:!!showValue, showPrice:!!showPrice,
     subjectKey:'items:'+(itemIds||[]).slice().sort().join(','),
     sourceItemIds:(itemIds||[]).slice(),
@@ -3311,7 +3311,7 @@ function buildAllSnapshot(showValue, showPrice){
   return {
     type:'collection', subjectKey:'all', title:'Full collection', icon:'🗂', description:'',
     ownerUid:(typeof currentUser!=='undefined'&&currentUser&&currentUser.uid)||'',
-    ownerName:(typeof currentUser!=='undefined'&&currentUser&&(currentUser.displayName||((currentUser.email||'').split('@')[0])))||'A collector',
+    ownerName:(typeof currentUser!=='undefined'&&currentUser&&currentUser.displayName)||'A collector',
     showValue:!!showValue, showPrice:!!showPrice,
     stats:{ items:total, groups:groups.length },
     groups:groups
