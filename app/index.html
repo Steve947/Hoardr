@@ -1541,7 +1541,7 @@ async function aiTidyNotes(){
       condition: (document.getElementById('fCondition')||{}).value || '',
       material: (typeof getMaterialValue==='function') ? getMaterialValue() : ''
     };
-    const call = fnSvc.httpsCallable('aiAssist');
+    const call = _aiFn();
     const resp = await call({ mode:'tidy', text: text, context: context });
     const data = resp && resp.data;
     const suggestion = (data && data.result && typeof data.result.description==='string') ? data.result.description.trim() : '';
@@ -1591,7 +1591,7 @@ async function aiEstimateValue(){
   const btn=document.getElementById('aiValueBtn'); const orig=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.innerHTML='… estimating'; }
   try{
-    const resp=await fnSvc.httpsCallable('aiAssist')({mode:'value', item:ctx, currency:(typeof curCode==='function'?curCode():'AUD')});
+    const resp=await _aiFn()({mode:'value', item:ctx, currency:(typeof curCode==='function'?curCode():'AUD')});
     const r=(resp.data&&resp.data.result)||{};
     const g=(resp.data&&resp.data.grounding)||{};
     const _eid=(document.getElementById('editId')||{}).value||null;
@@ -1699,7 +1699,7 @@ async function aiEstimateValueView(){
   const btn=document.getElementById('aiValueViewBtn'); const orig=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.innerHTML='… estimating'; }
   try{
-    const resp=await fnSvc.httpsCallable('aiAssist')({mode:'value', item:_aiValItemFromObject(item), currency:(typeof curCode==='function'?curCode():'AUD')});
+    const resp=await _aiFn()({mode:'value', item:_aiValItemFromObject(item), currency:(typeof curCode==='function'?curCode():'AUD')});
     const r=(resp.data&&resp.data.result)||{};
     const g=(resp.data&&resp.data.grounding)||{};
     _aiValuePending={ r:r, ctx:'view', itemId:item.id };
@@ -1836,7 +1836,7 @@ async function aiFillFromPhoto(){
     const pay={mode:'identify', imageBase64:img.b64, mimeType:img.mime};
     if(known){ pay.category=curCat; pay.fields=CAT_FIELDS[curCat].map(f=>f.label); }
     else { pay.catalog={}; Object.keys(CAT_FIELDS).forEach(c=>{ pay.catalog[c]=CAT_FIELDS[c].map(f=>f.label); }); }
-    const resp=await fnSvc.httpsCallable('aiAssist')(pay);
+    const resp=await _aiFn()(pay);
     const r=(resp.data&&resp.data.result)||{};
     const eff=known?curCat:(r.category&&CAT_FIELDS[r.category]?r.category:'');
     _aiFill={cat:eff, catFields:CAT_FIELDS[eff]||[], values:r.values||{}, basis:r.basis||{}, description:r.description||'', condition:r.condition_hint||'', guessedCat:known?'':eff};
@@ -1940,16 +1940,16 @@ async function _siFromPdf(buf,fname){
 }
 async function _siFromText(text,fname){
   showToast('AI reading your list…','✨');
-  try{ const resp=await fnSvc.httpsCallable('aiAssist')({mode:'parse_items', text, coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); _siItemsResult(resp.data&&resp.data.result, fname); }catch(err){ _siErr(err); }
+  try{ const resp=await _aiFn()({mode:'parse_items', text, coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); _siItemsResult(resp.data&&resp.data.result, fname); }catch(err){ _siErr(err); }
 }
 async function _siFromImage(b64,mime,fname){
   showToast('AI reading the image…','✨');
   const s=await _downscaleImageB64(b64, mime, 1536, 0.82); b64=s.b64; mime=s.mime;
-  try{ const resp=await fnSvc.httpsCallable('aiAssist')({mode:'parse_items', imageBase64:b64, mimeType:mime, coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); _siItemsResult(resp.data&&resp.data.result, fname); }catch(err){ _siErr(err); }
+  try{ const resp=await _aiFn()({mode:'parse_items', imageBase64:b64, mimeType:mime, coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); _siItemsResult(resp.data&&resp.data.result, fname); }catch(err){ _siErr(err); }
 }
 async function _siFromImages(b64s,fname){
   let cat='', items=[];
-  for(const b of b64s){ try{ const resp=await fnSvc.httpsCallable('aiAssist')({mode:'parse_items', imageBase64:b, mimeType:'image/jpeg', coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); const r=(resp.data&&resp.data.result)||{}; if(r.category&&!cat)cat=r.category; (r.items||[]).forEach(it=>items.push(it)); }catch(err){} }
+  for(const b of b64s){ try{ const resp=await _aiFn()({mode:'parse_items', imageBase64:b, mimeType:'image/jpeg', coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()}); const r=(resp.data&&resp.data.result)||{}; if(r.category&&!cat)cat=r.category; (r.items||[]).forEach(it=>items.push(it)); }catch(err){} }
   _siItemsResult({category:cat, items}, fname);
 }
 function _siItemsResult(r,fname){
@@ -1965,7 +1965,7 @@ function _siFromSpreadsheet(buf,fname){
     const rows=XLSX.utils.sheet_to_json(ws,{defval:''}).filter(r=>Object.values(r).some(v=>String(v).trim()));
     if(!rows.length){ _siShowErr('No rows found in that sheet'); return; }
     const headers=Object.keys(rows[0]);
-    fnSvc.httpsCallable('aiAssist')({mode:'map_import', headers, sampleRows:rows.slice(0,5), coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()})
+    _aiFn()({mode:'map_import', headers, sampleRows:rows.slice(0,5), coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()})
       .then(resp=>{ const r=(resp.data&&resp.data.result)||{};
         _smartImport={ kind:'table', fname, rows, headers, coreFields:Object.keys(_SI_CORE), category:(r.category&&CAT_FIELDS[r.category])?r.category:'', mapping:r.mapping||{}, transforms:r.transforms||[] };
         _renderSmartImport();
@@ -2201,6 +2201,19 @@ async function _refreshAiQuota(){
     _aiUsage.used = (snap.exists && snap.get('aiActions')) || 0;
     _aiUsage.limit = (snap.exists && snap.get('limit')) || (isProUser ? 50 : 5);
   }catch(e){ /* usage read rule not deployed, or offline — keep defaults */ }
+}
+// Wraps the aiAssist callable so the quota counter refreshes after EVERY
+// successful AI action. Without this the counter only updated on page load
+// or when a call failed, so a user watched it sit still while their monthly
+// allowance drained. Drop-in replacement for _aiFn().
+function _aiFn(){
+  const call = fnSvc.httpsCallable('aiAssist');
+  return function(payload){
+    return call(payload).then(function(resp){
+      _refreshAiQuota().then(function(){ try{ _renderProUI(); }catch(_){} });
+      return resp;
+    });
+  };
 }
 function _handleAiQuota(e){
   const c=(e&&e.code)||'';
