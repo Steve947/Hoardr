@@ -27,4 +27,10 @@
 !/story/
 !/media/
 !/app/
+
+# !/app/ re-includes the whole app folder, which also swept up the
+# index.html.before.* safety copies. Later rules win, so re-ignore them.
+/app/*.before*
+/app/*.bak
+/app/*.orig
 !/welcome/

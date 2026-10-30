@@ -4,6 +4,42 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.9.0] · 2026-10-30
+
+### Added
+- 18 new categories, taking the built-in list to 33: Art Prints, Autographs, Board Games, Bottle Caps, Building Bricks, Cassettes, Fountain Pens, Keychains, Minerals & Crystals, Mining Vehicles, Movie Memorabilia, Pin Badges, Pocket Knives, Pokemon Cards, Retro Games, Sneakers, Sports Memorabilia, Vintage Cameras. `BUILTIN_CATS`, the `catEmoji()` map and all three category `<option>` lists are generated from one order table so they cannot drift. Mining Vehicles is wired as a Diecast sub-type: `CAT_FIELDS['Mining Vehicles'] = CAT_FIELDS['Diecast']`, and the mining catalogue autocomplete fires for it too.
+- Persistent export progress bar (`#expProg`, `expProgShow` / `expProgSet` / `expProgHide`). Replaces `showToast`, which hid itself after 2.5s and read as nothing happening. Determinate, counts photos during the prefetch and items during layout, estimates time remaining, and a 90s watchdog hides it so a failed export cannot strand it.
+- Value over time graph filter on the dashboard: All, 3M, 6M, 1Y (`_trendRange`, `_rangeCut`, `_trendBlock`, `_setTrendRange`).
+- Multi-select dropdown control for category fields (`type:'multiselect'`, `_mselToggle` / `_mselCommit` / `_mselSync`), used by train livery colours. The panel is in flow rather than absolutely positioned, which is what stopped the list clipping partway down.
+- Searchable group picker modal replacing the `prompt()` in `bulkMove()`, so all groups are reachable rather than the ~22 that fitted in a browser prompt.
+
+### Changed
+- Catalogue PDF photo tiles enlarged from 30x26mm (thumbnail) and 32x30mm (gallery) to a single 40x34mm tile. All photo placement now reads one `TILE_W / TILE_H / TILE_GAP / TILE_X` declared once per export, so the thumbnail and gallery geometry cannot diverge again.
+- Train fields: "Loco Type" renamed to "Rolling Stock Type" with Passenger, Freight and Military added; `TRAIN_COLOURS` expanded to 45 liveries; Pullman added to `TRAIN_RAILWAYS`.
+- Smart Import destination pickers now open on "Select collection" and "Select group" placeholders instead of "New collection", and `smartImportApply` blocks until both are chosen.
+- Category filter in the collections view is now a `<select>` plus an Edit category button, rather than a row of chips.
+- This feature is called "Insurance schedule" everywhere. The Pro gate said "insurance appraisal", which contradicted the document's own disclaimer that it is not an appraisal. `exportInsuranceReport` renamed to `exportInsuranceSchedule`.
+
+### Fixed
+- Exports were taking ~15 minutes on a 2,887 item collection. Two causes: the insurance schedule prefetched every photo of every item when it only ever draws `photos[0]`, and the fetch pool was `CONC = 8` against HTTP/2 Storage. Now prefetches only the photos it prints and runs 24 in parallel. Measured on the same collection: 2,064 photos in about 60s, 2,887 items laid out in about 30s.
+- PDF photos were stretched to fill their box. `addImage` scales to exactly the width and height given, so portrait photos were visibly squashed, worst in the catalogue gallery. New `pdfFitImage` helper reads the real pixel dimensions via `getImageProperties`, scales to fit and centres the remainder. Applied to the catalogue thumbnail, the catalogue gallery and the insurance schedule photo grid.
+- Catalogue gallery tiles sat 2mm right of and 2mm wider than the thumbnail above them (`M+3` at 32x30 vs `M+1` at 30x26), so an item's photos never lined up. Both now share one origin and one size.
+- Gallery rows reserved 38mm of height for a 30mm tile, wasting 8mm per row. The reservation now follows the tile height.
+- Insurance schedule printed `$0.00` for items with no estimated value, because `fmtMoney` does `(Number(n)||0).toFixed(2)`. In a document an insurer reads, zero asserts the item is worthless while blank means not yet valued. Unvalued items now print an em dash, with a line under the summary giving the count and confirming they add nothing to the totals. The totals themselves were always correct.
+- Dashboard total cost showed $0 from a `parseFloat` returning NaN and poisoning the sum; it now uses `_itemCost(i)`.
+- Share pages published the local part of the owner's email address. Now falls back to the display name, or "A collector".
+- The AI usage counter did not move until a reload. All nine `aiAssist` call sites go through an `_aiFn()` wrapper that refreshes the quota and re-renders afterwards.
+
+## [1.8.0] · 2026-10-17
+
+### Added
+- Guided setup: creating a collection opens the group step, then the first item, instead of leaving the user on an empty screen.
+- Add to home screen from Profile, under Get the app.
+- Stamp condition grades (Used, Fine Used, Mint unhinged and others) and further categories including trading cards, coins and comics.
+
+### Fixed
+- Saving no longer stalls on a photo it cannot read, and the same photo can be added again without being skipped.
+
 ## [1.7.0] · 2026-09-15
 
 ### Added
