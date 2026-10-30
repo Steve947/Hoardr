@@ -1182,7 +1182,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
       </span>
     </button>
 
-    <button class="pdf-choice" id="pdfChoiceInsurance" onclick="closeModal('pdfChoiceModal');exportInsuranceReport()">
+    <button class="pdf-choice" id="pdfChoiceInsurance" onclick="closeModal('pdfChoiceModal');exportInsuranceSchedule()">
       <span class="pdf-choice-ic">🛡</span>
       <span>
         <b>Insurance schedule <span id="pdfInsLock" style="display:none;font-size:10px;color:var(--gold2);letter-spacing:.08em">· PRO</span></b>
@@ -4804,6 +4804,26 @@ function pdfTxt(t){
     .replace(/ {2,}/g,' ')
     .trim();
 }
+// Draw a photo inside a box WITHOUT distorting it. jsPDF's addImage stretches
+// the image to exactly the width and height given, which is what squashed
+// portrait photos in the catalogue gallery. This scales to fit and centres the
+// remainder, so a tall photo gets space either side instead of being squeezed.
+// Returns false if the image could not be drawn at all.
+function pdfFitImage(doc,data,x,y,bw,bh){
+  if(!data) return false;
+  let iw=0, ih=0;
+  try{ const pr=doc.getImageProperties(data); iw=pr.width; ih=pr.height; }catch(e){}
+  try{
+    if(iw>0 && ih>0){
+      const sc=Math.min(bw/iw, bh/ih);
+      const w=iw*sc, h=ih*sc;
+      doc.addImage(data,'JPEG',x+(bw-w)/2,y+(bh-h)/2,w,h);
+    } else {
+      doc.addImage(data,'JPEG',x,y,bw,bh);   // no metadata, keep the old behaviour
+    }
+    return true;
+  }catch(e){ return false; }
+}
 function pdfRoundRect(doc,x,y,w,h,r,fillRGB,strokeRGB){
   if(fillRGB){doc.setFillColor(...fillRGB);doc.roundedRect(x,y,w,h,r,r,'F');}
   if(strokeRGB){doc.setDrawColor(...strokeRGB);doc.setLineWidth(0.3);doc.roundedRect(x,y,w,h,r,r,'S');}
@@ -5001,8 +5021,8 @@ async function exportExcel(){
 // photographic evidence — formatted light/printable for submitting to an
 // insurer. This is a self-declared inventory, NOT an independent valuation.
 // ─────────────────────────────────────────────────────────────
-async function exportInsuranceReport(){
-  if(!isPro()){ showToast('The insurance appraisal is a Pro feature.','🔒'); try{openUpgrade();}catch(_){} return; }
+async function exportInsuranceSchedule(){
+  if(!isPro()){ showToast('The insurance schedule is a Pro feature.','🔒'); try{openUpgrade();}catch(_){} return; }
   if(!db.items.length){ showToast('No items to report','⚠️'); return; }
   expProgShow('Insurance schedule','Starting');
   await new Promise(r=>setTimeout(r,60));
@@ -5018,6 +5038,10 @@ async function exportInsuranceReport(){
   const owner=(typeof currentUser!=='undefined' && currentUser && (currentUser.displayName||currentUser.email)) || 'Collection owner';
   const refNo='HDR-'+now.toISOString().slice(0,10).replace(/-/g,'')+'-'+String(Math.floor(now.getTime()/1000)%10000).padStart(4,'0');
   const money=n=>fmtMoney(n);
+  // An item with no value recorded must not print as $0.00 in a document an
+  // insurer will read: zero asserts "worth nothing", blank means "not valued yet".
+  const hasVal=i=>i&&i.value!=null&&String(i.value).trim()!==''&&!isNaN(parseFloat(i.value));
+  const valStr=i=>hasVal(i)?money(i.value):'\u2014';
   const cut=(t,n)=>{t=String(t||''); return t.length>n?t.substring(0,n-1)+'…':t;};
   const photoCountOf=i=>(i.photos||[]).filter(p=>p).length;
   const sumVal=arr=>arr.reduce((a,i)=>a+(parseFloat(i.value)||0),0);
@@ -5095,7 +5119,13 @@ async function exportInsuranceReport(){
     doc.text(b[1],bx+4,by+16);
   });
 
+  const _unval=db.items.filter(i=>!hasVal(i)).length;
   y=by+bh+10;
+  if(_unval){
+    doc.setFontSize(7);doc.setFont('helvetica','italic');doc.setTextColor(150,120,40);
+    doc.text(_unval.toLocaleString()+' of '+db.items.length.toLocaleString()+' items have no estimated value recorded. They are shown as \u2014 rather than $0.00, and contribute nothing to the totals below.',M,by+bh+5.5);
+    y=by+bh+13;
+  }
   doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(35,30,20);
   doc.text('Summary by collection',M,y); y+=5;
   doc.setFillColor(238,232,214);doc.rect(M,y,RIGHT-M,7,'F');
@@ -5198,7 +5228,7 @@ async function exportInsuranceReport(){
         doc.text(cut(it.obtainedDate,11),CX.acq,y+4.2);
         doc.text(pdfTxt(cut(it.certRef,13)),CX.ref,y+4.2);
         doc.text(money(_itemCost(it)),CX.cost,y+4.2,{align:'right'});
-        doc.text(money(it.value),CX.val,y+4.2,{align:'right'});
+        doc.text(valStr(it),CX.val,y+4.2,{align:'right'});
         if(photoCountOf(it)){ doc.setTextColor(140,110,40); doc.text('A-'+no,CX.photo,y+4.2); }
         else { doc.setTextColor(165,158,145); doc.text('—',CX.photo,y+4.2); }
         y+=6;
@@ -5303,14 +5333,13 @@ async function exportInsuranceReport(){
           doc.setFontSize(6.2);doc.setFont('helvetica','bold');doc.setTextColor(232,214,160);
           doc.text('A-'+no,px+2,y+3.7);
           const iy=y+BADGE_H+1;
-          try{ doc.addImage(src,'JPEG',px,iy,PWD,PHT); }
-          catch(e){ doc.setFillColor(240,238,232);doc.rect(px,iy,PWD,PHT,'F'); }
+          if(!pdfFitImage(doc,src,px,iy,PWD,PHT)){ doc.setFillColor(240,238,232);doc.rect(px,iy,PWD,PHT,'F'); }
           doc.setDrawColor(215,205,180);doc.setLineWidth(0.3);doc.rect(px,iy,PWD,PHT,'S');
           doc.setFontSize(6);doc.setFont('helvetica','bold');doc.setTextColor(45,40,30);
           doc.text(pdfTxt(cut(it.name,25)),px,iy+PHT+3.5);
           doc.setFont('helvetica','normal');doc.setTextColor(140,110,40);
           const extra=photoCountOf(it)>1?('  (+'+(photoCountOf(it)-1)+' more on file)'):'';
-          doc.text(money(it.value)+extra,px,iy+PHT+7);
+          doc.text(valStr(it)+extra,px,iy+PHT+7);
           colIx++; px+=PWD+GAP;
           if(colIx===4){ colIx=0; px=M; y+=CELL_H; }
         }
@@ -5477,7 +5506,7 @@ async function exportPDF(){
         const THUMB_W=30, THUMB_H=26;
         if(nPhotos>0){
           try{
-            doc.addImage(photoData[0],'JPEG',M+1,startY+1,THUMB_W,THUMB_H);
+            pdfFitImage(doc,photoData[0],M+1,startY+1,THUMB_W,THUMB_H);
           }catch(err){}
           // photo count badge
           if(nPhotos>1){
@@ -5549,7 +5578,7 @@ async function exportPDF(){
             if(px+GPHOTO_W>PW-M){px=M+3;}
             try{
               pdfRoundRect(doc,px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H,1,[35,31,20],null);
-              doc.addImage(photoData[pi],'JPEG',px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H);
+              pdfFitImage(doc,photoData[pi],px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H);
             }catch(err){}
             px+=GPHOTO_W+GPHOTO_GAP;
           }
