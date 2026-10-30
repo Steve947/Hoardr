@@ -1173,10 +1173,13 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-title">Export a PDF</div>
     <p style="color:var(--text3);font-size:12px;margin:-8px 0 12px">Choose which kind of document you need.</p>
-    <label style="display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Include</label>
-    <select id="pdfScopeSel" style="width:100%;margin-bottom:16px"></select>
+    <label style="display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Collections to include</label>
+    <div id="pdfScopeList" style="max-height:168px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:10px"></div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);margin-bottom:16px">
+      <input type="checkbox" id="pdfInclPricesCb" checked> Include what you paid and estimated values
+    </label>
 
-    <button class="pdf-choice" onclick="var _s=(document.getElementById('pdfScopeSel')||{}).value;closeModal('pdfChoiceModal');exportPDF(_s)">
+    <button class="pdf-choice" onclick="var _s=_pdfScopeIds(),_p=_pdfInclPrices();closeModal('pdfChoiceModal');exportPDF(_s,_p)">
       <span class="pdf-choice-ic">📄</span>
       <span>
         <b>Catalogue <span id="pdfCatLock" style="display:none;font-size:10px;color:var(--gold2);letter-spacing:.08em">· PRO</span></b>
@@ -1184,7 +1187,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
       </span>
     </button>
 
-    <button class="pdf-choice" id="pdfChoiceInsurance" onclick="var _s=(document.getElementById('pdfScopeSel')||{}).value;closeModal('pdfChoiceModal');exportInsuranceSchedule(_s)">
+    <button class="pdf-choice" id="pdfChoiceInsurance" onclick="var _s=_pdfScopeIds();closeModal('pdfChoiceModal');exportInsuranceSchedule(_s)">
       <span class="pdf-choice-ic">🛡</span>
       <span>
         <b>Insurance schedule <span id="pdfInsLock" style="display:none;font-size:10px;color:var(--gold2);letter-spacing:.08em">· PRO</span></b>
@@ -5038,14 +5041,16 @@ async function exportExcel(){
 async function exportInsuranceSchedule(scopeId){
   // Scope: a single collection, or everything when no id is passed. When not
   // scoped these are the untouched db arrays, so a full export is unchanged.
-  const _scoped = !!(scopeId && scopeId !== '__all__');
-  const _cols   = _scoped ? db.collections.filter(c=>c.id===scopeId) : db.collections;
+  const _ids    = Array.isArray(scopeId) ? scopeId.filter(Boolean)
+                 : ((scopeId && scopeId !== '__all__') ? [scopeId] : []);
+  const _scoped = _ids.length > 0;
+  const _cols   = _scoped ? db.collections.filter(c=>_ids.indexOf(c.id)>=0) : db.collections;
   const _colIds = new Set(_cols.map(c=>c.id));
   const _groups = _scoped ? db.groups.filter(g=>_colIds.has(g.collectionId)) : db.groups;
   const _grpIds = new Set(_groups.map(g=>g.id));
   const _items  = _scoped ? db.items.filter(i=>_grpIds.has(i.groupId)) : db.items;
-  const _scopeName = _scoped ? ((_cols[0]&&_cols[0].name)||'Collection') : '';
-  if(_scoped && !_items.length){ showToast('That collection has no items yet','⚠️'); return; }
+  const _scopeName = _scoped ? (_cols.length===1 ? ((_cols[0]&&_cols[0].name)||'Collection') : (_cols.length+' collections')) : '';
+  if(_scoped && !_items.length){ showToast('Nothing to export in what you picked','⚠️'); return; }
 
   if(!isPro()){ showToast('The insurance schedule is a Pro feature.','🔒'); try{openUpgrade();}catch(_){} return; }
   if(!_items.length){ showToast('No items to report','⚠️'); return; }
@@ -5385,21 +5390,24 @@ async function exportInsuranceSchedule(scopeId){
 // ─────────────────────────────────────────────────────────────
 // PDF EXPORT  –  Collection > Group > Items with full photo galleries
 // ─────────────────────────────────────────────────────────────
-async function exportPDF(scopeId){
+async function exportPDF(scopeId, inclPrices){
   // Scope: a single collection, or everything when no id is passed. When not
   // scoped these are the untouched db arrays, so a full export is unchanged.
-  const _scoped = !!(scopeId && scopeId !== '__all__');
-  const _cols   = _scoped ? db.collections.filter(c=>c.id===scopeId) : db.collections;
+  const _ids    = Array.isArray(scopeId) ? scopeId.filter(Boolean)
+                 : ((scopeId && scopeId !== '__all__') ? [scopeId] : []);
+  const _scoped = _ids.length > 0;
+  const _cols   = _scoped ? db.collections.filter(c=>_ids.indexOf(c.id)>=0) : db.collections;
   const _colIds = new Set(_cols.map(c=>c.id));
   const _groups = _scoped ? db.groups.filter(g=>_colIds.has(g.collectionId)) : db.groups;
   const _grpIds = new Set(_groups.map(g=>g.id));
   const _items  = _scoped ? db.items.filter(i=>_grpIds.has(i.groupId)) : db.items;
-  const _scopeName = _scoped ? ((_cols[0]&&_cols[0].name)||'Collection') : '';
-  if(_scoped && !_items.length){ showToast('That collection has no items yet','⚠️'); return; }
+  const _scopeName = _scoped ? (_cols.length===1 ? ((_cols[0]&&_cols[0].name)||'Collection') : (_cols.length+' collections')) : '';
+  if(_scoped && !_items.length){ showToast('Nothing to export in what you picked','⚠️'); return; }
 
   if(!isPro()){ showToast('The catalogue PDF is a Pro feature. Your data stays exportable free via Excel.','🔒'); try{openUpgrade();}catch(_){} return; }
   if(!_items.length){showToast('No items to export','⚠️');return;}
   const inclPhotos = isPro();
+  const _inclPrices = (inclPrices !== false);
   expProgShow('Catalogue PDF','Starting');
   await new Promise(r=>setTimeout(r,60));
   if(inclPhotos) await prefetchPhotos(_items.flatMap(i=>(i.photos||[]).filter(Boolean)), 'Catalogue PDF');
@@ -5540,7 +5548,10 @@ async function exportPDF(scopeId){
         // The gallery renders photos[1..n-1], so only those need reserved space
         const photoRows=Math.ceil(Math.max(1,nPhotos)/TILE_COLS);
         const textBottom=item.shortDesc?(28+d3h):(det3Lines.length?(23+d3h):(det2?23:(det1?18:14)));
-        const rightBottom=item.rating?22:(item.value?(item.purchasePrice?15:9):0);
+        const _cost=_itemCost(item);
+        const _showVal=_inclPrices&&!!item.value;
+        const _showCost=_inclPrices&&_cost>0;
+        const rightBottom=Math.max(item.rating?26:0,(_showVal?12:0)+(_showCost?10:0));
         const thumbBottom=photoRows*(TILE_H+TILE_GAP)+1;
         const rowH=Math.max(textBottom,rightBottom,thumbBottom)+2;
 
@@ -5613,21 +5624,31 @@ async function exportPDF(scopeId){
           doc.text(pdfTxt(item.shortDesc).substring(0,140),tx,startY+26+d3h);
         }
 
-        // VALUE — right-aligned, prominent
-        if(item.value){
-          doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(201,168,76);
-          doc.text(fmtMoney(item.value),PW-M-2,startY+7,{align:'right'});
-          if(item.purchasePrice){
-            doc.setFontSize(6.5);doc.setTextColor(120,110,80);doc.setFont('helvetica','normal');
-            doc.text('Paid: '+fmtMoney(item.purchasePrice),PW-M-2,startY+13,{align:'right'});
+        // PRICES — right-aligned and LABELLED. A bare gold number told the
+        // reader nothing about whether it was cost or worth, and the purchase
+        // price was nested inside the value test, so an item with a cost but
+        // no estimate showed no pricing at all.
+        {
+          let vy=startY+4;
+          if(_showVal){
+            doc.setFontSize(6.3);doc.setFont('helvetica','normal');doc.setTextColor(120,110,80);
+            doc.text('Estimated value',PW-M-2,vy,{align:'right'});
+            doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(201,168,76);
+            doc.text(fmtMoney(item.value),PW-M-2,vy+5.5,{align:'right'});
+            vy+=12;
+          }
+          if(_showCost){
+            doc.setFontSize(6.3);doc.setFont('helvetica','normal');doc.setTextColor(120,110,80);
+            doc.text('Bought for',PW-M-2,vy,{align:'right'});
+            doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(150,138,110);
+            doc.text(fmtMoney(_cost),PW-M-2,vy+5,{align:'right'});
           }
         }
 
         // Rating stars
         if(item.rating){
-          let sx=PW-M-2-(item.rating*4);
-          doc.setFontSize(7.5);doc.setTextColor(201,168,76);
-          doc.text('*'.repeat(item.rating)+'.'.repeat(5-item.rating),PW-M-2,startY+20,{align:'right'});
+          doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(201,168,76);
+          doc.text('*'.repeat(item.rating)+'.'.repeat(5-item.rating),PW-M-2,startY+24,{align:'right'});
         }
 
 
@@ -6275,23 +6296,45 @@ async function restoreItem(item){
   }
   showToast('Item restored','↩');
 }
+// PDF export scope. An empty list means everything, which is also what the
+// two exports treat as unscoped, so a full export behaves exactly as it did.
+function _pdfScopeAll(cb){
+  if(cb && cb.checked) document.querySelectorAll('.pdfScopeCb').forEach(function(x){ x.checked=false; });
+}
+function _pdfScopeSync(){
+  const any=Array.from(document.querySelectorAll('.pdfScopeCb')).some(function(x){ return x.checked; });
+  const all=document.getElementById('pdfScopeAll');
+  if(all) all.checked=!any;
+}
+function _pdfScopeIds(){
+  const all=document.getElementById('pdfScopeAll');
+  if(all && all.checked) return [];
+  return Array.from(document.querySelectorAll('.pdfScopeCb')).filter(function(x){ return x.checked; }).map(function(x){ return x.value; });
+}
+function _pdfInclPrices(){
+  const cb=document.getElementById('pdfInclPricesCb');
+  return !cb || cb.checked;
+}
 function openPdfChooser(){
   // Scope picker: everything, or one collection. Defaults to the collection
   // being viewed, because exporting 2,000 items when you wanted 45 is the
   // thing people complain about.
-  const sel=document.getElementById('pdfScopeSel');
-  if(sel){
+  const box=document.getElementById('pdfScopeList');
+  if(box){
     const cur=(typeof selectedCollectionId!=='undefined'&&selectedCollectionId)?selectedCollectionId:'';
     const counts={};
-    db.groups.forEach(function(g){ counts[g.collectionId]=(counts[g.collectionId]||0); });
     db.items.forEach(function(i){ const g=db.groups.find(x=>x.id===i.groupId); if(g) counts[g.collectionId]=(counts[g.collectionId]||0)+1; });
-    let html='<option value="__all__">All collections ('+db.items.length+' items)</option>';
+    const row=function(id,label,checked){
+      return '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);padding:3px 0">'
+           + '<input type="checkbox" class="pdfScopeCb" value="'+escH(id)+'"'+(checked?' checked':'')+' onchange="_pdfScopeSync()"> '+label+'</label>';
+    };
+    let html='<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);font-weight:600;padding:3px 0;border-bottom:1px solid var(--line);margin-bottom:4px">'
+           + '<input type="checkbox" id="pdfScopeAll"'+(cur?'':' checked')+' onchange="_pdfScopeAll(this)"> All collections ('+db.items.length+' items)</label>';
     db.collections.forEach(function(c){
       const n=counts[c.id]||0;
-      html+='<option value="'+escH(c.id)+'"'+(c.id===cur?' selected':'')+'>'+escH(c.name)+' ('+n+' item'+(n!==1?'s':'')+')</option>';
+      html+=row(c.id, escH(c.name)+' <span style="color:var(--text3)">('+n+' item'+(n!==1?'s':'')+')</span>', c.id===cur);
     });
-    sel.innerHTML=html;
-    if(!cur) sel.value='__all__';
+    box.innerHTML=html;
   }
   const lock=document.getElementById('pdfInsLock');
   if(lock) lock.style.display = isPro() ? 'none' : 'inline';
