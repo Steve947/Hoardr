@@ -1384,6 +1384,17 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toastIcon">✓</span><span id="toastMsg">Saved</span><button id="toastAction" onclick="toastActionClick()" style="display:none;background:var(--gold);color:#1a1200;border:none;border-radius:5px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px">Undo</button></div>
 
+<div id="expProg" style="display:none;position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:650;width:min(430px,calc(100vw - 24px));box-sizing:border-box;background:var(--surface2);border:1px solid var(--gold);border-radius:12px;padding:12px 14px;box-shadow:0 10px 34px rgba(0,0,0,.65)">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px">
+    <span id="expProgTitle" style="font-size:13px;font-weight:700;color:#f4ecdd">Working</span>
+    <span id="expProgEta" style="font-size:11.5px;color:var(--text2);white-space:nowrap"></span>
+  </div>
+  <div style="height:7px;border-radius:4px;background:rgba(216,168,56,.18);overflow:hidden">
+    <div id="expProgFill" style="height:100%;width:0%;background:var(--gold);transition:width .18s linear"></div>
+  </div>
+  <div id="expProgNote" style="font-size:11.5px;color:var(--text2);margin-top:7px">Starting</div>
+</div>
+
 <div id="bulkBar" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:140;background:var(--surface2);border:1px solid var(--gold);border-radius:12px;padding:9px 12px;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;max-width:calc(100vw - 16px);box-sizing:border-box;box-shadow:0 8px 30px rgba(0,0,0,.6)">
   <span id="bulkCount" style="font-size:13px;color:var(--text2);font-weight:600">0 selected</span>
   <button class="btn btn-gold btn-sm" onclick="bulkShare()">🔗 Share</button>
@@ -2649,7 +2660,7 @@ async function prefetchPhotos(photos, label){
     (photos || []).filter(p => p && typeof p === 'object' && p.url).map(p => p.url)
   )].filter(u => !_photoCache.has(u));
   if (!urls.length) return;
-  const CONC = 8;
+  const CONC = 24;   // Storage is HTTP/2, so 8 left the link idle
   let done = 0;
   const queue = urls.slice();
   const worker = async () => {
@@ -2669,8 +2680,7 @@ async function prefetchPhotos(photos, label){
         }
       } catch (e) { /* leave uncached — photoToDataUrl falls back per photo */ }
       done++;
-      if (done % 25 === 0 || done === urls.length)
-        showToast(`${label} — preparing photos ${done}/${urls.length}`, '\u23f3');
+      expProgSet(done, urls.length, 'Preparing photos');
     }
   };
   await Promise.all(Array.from({ length: CONC }, worker));
@@ -4994,9 +5004,10 @@ async function exportExcel(){
 async function exportInsuranceReport(){
   if(!isPro()){ showToast('The insurance appraisal is a Pro feature.','🔒'); try{openUpgrade();}catch(_){} return; }
   if(!db.items.length){ showToast('No items to report','⚠️'); return; }
-  showToast('Building insurance schedule… please wait','⏳');
+  expProgShow('Insurance schedule','Starting');
   await new Promise(r=>setTimeout(r,60));
-  await prefetchPhotos(db.items.flatMap(i=>(i.photos||[]).filter(Boolean)), 'Insurance report');
+  // this report draws photos[0] only, so warming every photo of every item was waste
+  await prefetchPhotos(db.items.map(i=>(i.photos||[]).filter(Boolean)[0]).filter(Boolean), 'Insurance schedule');
 
   try{
   const {jsPDF}=window.jspdf;
@@ -5269,6 +5280,7 @@ async function exportInsuranceReport(){
     doc.text('Arranged by collection and group, matching the itemised schedule. Each photograph is labelled',M,29);
     doc.text('with its schedule reference — e.g. A-12 is item 12. Taken as at '+dateStr+'.',M,33);
     const PWD=42, PHT=32, GAP=4, BADGE_H=5.2, CELL_H=5.2+1+32+8;
+    let _drawn=0; const _toDraw=db.items.length;
     y=40;
     for(const sec of annex){
       ensure(30);
@@ -5284,7 +5296,7 @@ async function exportInsuranceReport(){
         let px=M, colIx=0;
         for(const it of g.items){
           if(y+CELL_H>PH-16){ nextPage(); y=20; px=M; colIx=0; }
-          const no=itemNo.get(it.id);
+          const no=itemNo.get(it.id); expProgSet(++_drawn,_toDraw,'Laying out items');
           const src=await photoToDataUrl((it.photos||[]).filter(p=>p)[0]);
           // Reference tab sits ABOVE the photo so it never obscures the item
           doc.setFillColor(45,40,28);doc.rect(px,y,16,BADGE_H,'F');
@@ -5311,8 +5323,8 @@ async function exportInsuranceReport(){
 
   footer();
   doc.save('Hoardr-Insurance-Schedule-'+now.toISOString().slice(0,10)+'.pdf');
-  showToast('Insurance schedule ready','🛡');
-  }catch(err){ showToast('Report failed: '+err.message,'⚠️'); }
+  expProgHide(); showToast('Insurance schedule ready','🛡');
+  }catch(err){ expProgHide(); showToast('Report failed: '+err.message,'⚠️'); }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -5322,7 +5334,7 @@ async function exportPDF(){
   if(!isPro()){ showToast('The catalogue PDF is a Pro feature. Your data stays exportable free via Excel.','🔒'); try{openUpgrade();}catch(_){} return; }
   if(!db.items.length){showToast('No items to export','⚠️');return;}
   const inclPhotos = isPro();
-  showToast(inclPhotos?'Building PDF with photos… please wait':'Building PDF…','⏳');
+  expProgShow('Catalogue PDF','Starting');
   await new Promise(r=>setTimeout(r,60));
   if(inclPhotos) await prefetchPhotos(db.items.flatMap(i=>(i.photos||[]).filter(Boolean)), 'Catalogue PDF');
 
@@ -5330,6 +5342,7 @@ async function exportPDF(){
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   const PW=297, PH=210, M=14;
+  let _drawn=0; const _toDraw=db.items.length;
   const dateStr=new Date().toLocaleDateString();
 
   // ── Page header band ──
@@ -5433,6 +5446,7 @@ async function exportPDF(){
       groupLabel(grp,gItems.length,false);
 
       for(const item of gItems){
+        expProgSet(++_drawn,_toDraw,'Laying out items');
         const photos=inclPhotos?(item.photos||[]).filter(p=>p):[];
         const nPhotos=photos.length;
         // jsPDF cannot fetch a URL, so resolve each photo to a data: URL up
@@ -5577,7 +5591,7 @@ async function exportPDF(){
   });
 
   doc.save('hoardr_export.pdf');
-  showToast('PDF exported — full photo gallery included','📄');
+  expProgHide(); showToast('PDF exported — full photo gallery included','📄');
 }
 // ═══════════════════════════════════════════════════════════
 // RATING
@@ -6111,6 +6125,51 @@ window.addEventListener('DOMContentLoaded', renderIconPickers);
 // selectGroup/selectCollection/selectAll already handle mobile drawer in their own functions
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 let _toastActionFn=null;
+// Persistent export progress bar.
+// A 2000 item collection means thousands of photo downloads, and the old
+// reporting went through showToast, which hides itself after 2.5s. Users
+// read the gaps as "nothing is happening". This bar stays up for the whole
+// job, counts every step and estimates the finish. A watchdog hides it if
+// nothing reports for 90s so a failed export cannot leave it stranded.
+let _expT0=0,_expLast=0,_expDog=null;
+function expProgShow(title,note){
+  const el=document.getElementById('expProg'); if(!el) return;
+  _expT0=Date.now(); _expLast=0;
+  document.getElementById('expProgTitle').textContent=title;
+  document.getElementById('expProgEta').textContent='';
+  document.getElementById('expProgFill').style.width='0%';
+  document.getElementById('expProgNote').textContent=note||'Starting';
+  el.style.display='block';
+  _expWatchdog();
+}
+function _expWatchdog(){
+  clearTimeout(_expDog);
+  _expDog=setTimeout(function(){ expProgHide(); },90000);
+}
+function expProgSet(done,total,note){
+  const el=document.getElementById('expProg');
+  if(!el||el.style.display==='none') return;
+  _expWatchdog();
+  const now=Date.now();
+  if(done<total && now-_expLast<120) return;
+  _expLast=now;
+  const pct=total?Math.min(100,Math.round(done/total*100)):0;
+  document.getElementById('expProgFill').style.width=pct+'%';
+  document.getElementById('expProgNote').textContent=
+    (note||'')+(total?('  '+done.toLocaleString()+' of '+total.toLocaleString()):'');
+  let eta='';
+  const secs=(now-_expT0)/1000;
+  if(done>4&&done<total&&secs>3){
+    const rem=Math.round(secs/done*(total-done));
+    eta = rem>=90 ? ('about '+Math.round(rem/60)+' min left')
+                  : ('about '+Math.max(5,Math.round(rem/5)*5)+' sec left');
+  }
+  document.getElementById('expProgEta').textContent=eta;
+}
+function expProgHide(){
+  clearTimeout(_expDog);
+  const el=document.getElementById('expProg'); if(el) el.style.display='none';
+}
 function showToast(msg,icon='✓',actionLabel=null,actionFn=null){
   const t=document.getElementById('toast');
   document.getElementById('toastMsg').textContent=msg;
