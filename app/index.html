@@ -5371,6 +5371,10 @@ async function exportPDF(){
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   const PW=297, PH=210, M=14;
+  // Every photo tile in the catalogue uses this one geometry. The thumbnail and
+  // the gallery previously had their own sizes and x origins, which is why a
+  // second photo sat 2mm right of and 2mm wider than the first.
+  const TILE_W=40, TILE_H=34, TILE_GAP=3, TILE_X=14+1;
   let _drawn=0; const _toDraw=db.items.length;
   const dateStr=new Date().toLocaleDateString();
 
@@ -5490,8 +5494,8 @@ async function exportPDF(){
         const photoRows=nPhotos>1?Math.ceil((nPhotos-1)/4):0;
         const textBottom=item.shortDesc?28:(det2?23:(det1?18:14));
         const rightBottom=item.rating?22:(item.value?(item.purchasePrice?15:9):0);
-        const thumbBottom=nPhotos>0?29:0;
-        const rowH=Math.max(textBottom,rightBottom,thumbBottom)+(photoRows>0?photoRows*38+4:0);
+        const thumbBottom=nPhotos>0?TILE_H+3:0;
+        const rowH=Math.max(textBottom,rightBottom,thumbBottom)+(photoRows>0?photoRows*(TILE_H+TILE_GAP)+4:0);
 
         if(startY+rowH>PH-8){ bodyPage(); groupLabel(grp,gItems.length,true); }
 
@@ -5503,16 +5507,16 @@ async function exportPDF(){
         doc.line(M,startY+rowH,PW-M,startY+rowH);
 
         // LEFT COLUMN: first photo large thumbnail
-        const THUMB_W=30, THUMB_H=26;
+        const THUMB_W=TILE_W, THUMB_H=TILE_H;
         if(nPhotos>0){
           try{
-            pdfFitImage(doc,photoData[0],M+1,startY+1,THUMB_W,THUMB_H);
+            pdfFitImage(doc,photoData[0],TILE_X,startY+1,THUMB_W,THUMB_H);
           }catch(err){}
           // photo count badge
           if(nPhotos>1){
-            pdfRoundRect(doc,M+1,startY+THUMB_H-5,THUMB_W,5,0.5,[20,18,12],[82,74,42]);
+            pdfRoundRect(doc,TILE_X,startY+THUMB_H-5,THUMB_W,5,0.5,[20,18,12],[82,74,42]);
             doc.setFontSize(6);doc.setTextColor(201,168,76);
-            doc.text(nPhotos+' photos',M+THUMB_W/2+1,startY+THUMB_H-1.5,{align:'center'});
+            doc.text(nPhotos+' photos',TILE_X+THUMB_W/2,startY+THUMB_H-1.5,{align:'center'});
           }
         }
         const tx=nPhotos>0?M+THUMB_W+4:M+3;
@@ -5572,10 +5576,10 @@ async function exportPDF(){
         // ── Additional photos gallery (all photos below text block) ──
         if(nPhotos>1){
           const galleryY=startY+Math.max(textBottom,rightBottom,thumbBottom)+1;
-          const GPHOTO_W=32, GPHOTO_H=30, GPHOTO_GAP=3;
-          let px=M+3;
+          const GPHOTO_W=TILE_W, GPHOTO_H=TILE_H, GPHOTO_GAP=TILE_GAP;
+          let px=TILE_X;
           for(let pi=1;pi<nPhotos;pi++){
-            if(px+GPHOTO_W>PW-M){px=M+3;}
+            if(px+GPHOTO_W>PW-M){px=TILE_X;}
             try{
               pdfRoundRect(doc,px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H,1,[35,31,20],null);
               pdfFitImage(doc,photoData[pi],px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H);
