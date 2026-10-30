@@ -5386,7 +5386,8 @@ async function exportPDF(){
   // Every photo tile in the catalogue uses this one geometry. The thumbnail and
   // the gallery previously had their own sizes and x origins, which is why a
   // second photo sat 2mm right of and 2mm wider than the first.
-  const TILE_W=40, TILE_H=34, TILE_GAP=3, TILE_X=14+1;
+  const TILE_W=34, TILE_H=34, TILE_GAP=3, TILE_X=14+1, TILE_COLS=2;
+  const PHOTO_COL_W=TILE_COLS*TILE_W+(TILE_COLS-1)*TILE_GAP;
   let _drawn=0; const _toDraw=db.items.length;
   const dateStr=new Date().toLocaleDateString();
 
@@ -5503,11 +5504,11 @@ async function exportPDF(){
         const det1=[item.material&&'Material: '+item.material,dimStr(item)&&'Size: '+dimStr(item),item.obtainedDate&&'Obtained: '+item.obtainedDate,item.obtainedFrom&&'From: '+item.obtainedFrom].filter(Boolean).join('   ');
         const det2=[item.seller&&'Seller: '+item.seller,item.provenance&&'Provenance: '+item.provenance,item.certRef&&'Ref: '+item.certRef].filter(Boolean).join('   ');
         // The gallery renders photos[1..n-1], so only those need reserved space
-        const photoRows=nPhotos>1?Math.ceil((nPhotos-1)/4):0;
+        const photoRows=Math.ceil(Math.max(1,nPhotos)/TILE_COLS);
         const textBottom=item.shortDesc?28:(det2?23:(det1?18:14));
         const rightBottom=item.rating?22:(item.value?(item.purchasePrice?15:9):0);
-        const thumbBottom=nPhotos>0?TILE_H+3:0;
-        const rowH=Math.max(textBottom,rightBottom,thumbBottom)+(photoRows>0?photoRows*(TILE_H+TILE_GAP)+4:0);
+        const thumbBottom=photoRows*(TILE_H+TILE_GAP)+1;
+        const rowH=Math.max(textBottom,rightBottom,thumbBottom)+2;
 
         if(startY+rowH>PH-8){ bodyPage(); groupLabel(grp,gItems.length,true); }
 
@@ -5518,21 +5519,24 @@ async function exportPDF(){
         doc.setDrawColor(61,53,32);doc.setLineWidth(0.15);
         doc.line(M,startY+rowH,PW-M,startY+rowH);
 
-        // LEFT COLUMN: first photo large thumbnail
-        const THUMB_W=TILE_W, THUMB_H=TILE_H;
-        if(nPhotos>0){
+        // PHOTO COLUMN: every photo of the item on one grid, two across.
+        // Previously photo 1 was a thumbnail here and photos 2+ were a separate
+        // gallery below the whole text block, which made a two photo item twice
+        // as tall as a one photo item for no reason and left the right of the
+        // row empty. One grid, one origin, one tile size.
+        for(let pi=0; pi<Math.max(1,nPhotos); pi++){
+          const bx=TILE_X+(pi%TILE_COLS)*(TILE_W+TILE_GAP);
+          const by=startY+1+Math.floor(pi/TILE_COLS)*(TILE_H+TILE_GAP);
           try{
-            pdfRoundRect(doc,TILE_X,startY+1,THUMB_W,THUMB_H,1,[35,31,20],null);
-            pdfFitImage(doc,photoData[0],TILE_X,startY+1,THUMB_W,THUMB_H);
+            pdfRoundRect(doc,bx,by,TILE_W,TILE_H,1,[35,31,20],null);
+            if(nPhotos>0){ pdfFitImage(doc,photoData[pi],bx,by,TILE_W,TILE_H); }
+            else {
+              doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(96,88,66);
+              doc.text('No photo',bx+TILE_W/2,by+TILE_H/2+1,{align:'center'});
+            }
           }catch(err){}
-          // photo count badge
-          if(nPhotos>1){
-            pdfRoundRect(doc,TILE_X,startY+1+THUMB_H-5,THUMB_W,5,0.5,[20,18,12],[82,74,42]);
-            doc.setFontSize(6);doc.setTextColor(201,168,76);
-            doc.text(nPhotos+' photos',TILE_X+THUMB_W/2,startY+1+THUMB_H-1.5,{align:'center'});
-          }
         }
-        const tx=nPhotos>0?M+THUMB_W+4:M+3;
+        const tx=M+PHOTO_COL_W+4;
 
         // Item name + ID
         const itemIdx=db.items.findIndex(i=>i.id===item.id)+1;
@@ -5586,20 +5590,6 @@ async function exportPDF(){
           doc.text('*'.repeat(item.rating)+'.'.repeat(5-item.rating),PW-M-2,startY+20,{align:'right'});
         }
 
-        // ── Additional photos gallery (all photos below text block) ──
-        if(nPhotos>1){
-          const galleryY=startY+Math.max(textBottom,rightBottom,thumbBottom)+1;
-          const GPHOTO_W=TILE_W, GPHOTO_H=TILE_H, GPHOTO_GAP=TILE_GAP;
-          let px=TILE_X;
-          for(let pi=1;pi<nPhotos;pi++){
-            if(px+GPHOTO_W>PW-M){px=TILE_X;}
-            try{
-              pdfRoundRect(doc,px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H,1,[35,31,20],null);
-              pdfFitImage(doc,photoData[pi],px,galleryY+(Math.floor((pi-1)/4)*(GPHOTO_H+GPHOTO_GAP)),GPHOTO_W,GPHOTO_H);
-            }catch(err){}
-            px+=GPHOTO_W+GPHOTO_GAP;
-          }
-        }
 
         startY+=rowH+2;
       }
