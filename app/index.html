@@ -5522,13 +5522,14 @@ async function exportPDF(){
         const THUMB_W=TILE_W, THUMB_H=TILE_H;
         if(nPhotos>0){
           try{
+            pdfRoundRect(doc,TILE_X,startY+1,THUMB_W,THUMB_H,1,[35,31,20],null);
             pdfFitImage(doc,photoData[0],TILE_X,startY+1,THUMB_W,THUMB_H);
           }catch(err){}
           // photo count badge
           if(nPhotos>1){
-            pdfRoundRect(doc,TILE_X,startY+THUMB_H-5,THUMB_W,5,0.5,[20,18,12],[82,74,42]);
+            pdfRoundRect(doc,TILE_X,startY+1+THUMB_H-5,THUMB_W,5,0.5,[20,18,12],[82,74,42]);
             doc.setFontSize(6);doc.setTextColor(201,168,76);
-            doc.text(nPhotos+' photos',TILE_X+THUMB_W/2,startY+THUMB_H-1.5,{align:'center'});
+            doc.text(nPhotos+' photos',TILE_X+THUMB_W/2,startY+1+THUMB_H-1.5,{align:'center'});
           }
         }
         const tx=nPhotos>0?M+THUMB_W+4:M+3;
