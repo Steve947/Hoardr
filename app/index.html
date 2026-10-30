@@ -5501,11 +5501,20 @@ async function exportPDF(){
 
         // Detail lines are built up-front so the row can be sized to its real
         // content instead of always reserving a full 28mm text block.
-        const det1=[item.material&&'Material: '+item.material,dimStr(item)&&'Size: '+dimStr(item),item.obtainedDate&&'Obtained: '+item.obtainedDate,item.obtainedFrom&&'From: '+item.obtainedFrom].filter(Boolean).join('   ');
+        const det1=[(qtyOf(item)>1)&&('Qty: '+qtyOf(item)),item.material&&'Material: '+item.material,dimStr(item)&&'Size: '+dimStr(item),item.obtainedDate&&'Obtained: '+item.obtainedDate,item.obtainedFrom&&'From: '+item.obtainedFrom].filter(Boolean).join('   ');
         const det2=[item.seller&&'Seller: '+item.seller,item.provenance&&'Provenance: '+item.provenance,item.certRef&&'Ref: '+item.certRef].filter(Boolean).join('   ');
+        const _cfDefs=(item.category&&typeof CAT_FIELDS!=='undefined'&&CAT_FIELDS[item.category])||[];
+        const det3=_cfDefs.map(function(fd){
+          const v=item.catFieldVals&&item.catFieldVals[fd.key];
+          const sv=Array.isArray(v)?v.join(', '):(v==null?'':String(v));
+          return sv.trim()?(fd.label+': '+sv.trim()):'';
+        }).filter(Boolean).join('   ');
+        doc.setFontSize(7.5);
+        const det3Lines=det3?doc.splitTextToSize(pdfTxt(det3),150).slice(0,2):[];
+        const d3h=det3Lines.length*4.5;
         // The gallery renders photos[1..n-1], so only those need reserved space
         const photoRows=Math.ceil(Math.max(1,nPhotos)/TILE_COLS);
-        const textBottom=item.shortDesc?28:(det2?23:(det1?18:14));
+        const textBottom=item.shortDesc?(28+d3h):(det3Lines.length?(23+d3h):(det2?23:(det1?18:14)));
         const rightBottom=item.rating?22:(item.value?(item.purchasePrice?15:9):0);
         const thumbBottom=photoRows*(TILE_H+TILE_GAP)+1;
         const rowH=Math.max(textBottom,rightBottom,thumbBottom)+2;
@@ -5541,7 +5550,7 @@ async function exportPDF(){
         // Item name + ID
         const itemIdx=db.items.findIndex(i=>i.id===item.id)+1;
         doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(232,223,200);
-        doc.text('#'+String(itemIdx).padStart(4,'0')+'  '+pdfTxt(item.name).substring(0,52),tx,startY+6);
+        doc.text('#'+String(itemIdx).padStart(4,'0')+'  '+pdfTxt(item.name).substring(0,64),tx,startY+6);
 
         // Condition + category badges
         let bx2=tx;
@@ -5562,15 +5571,21 @@ async function exportPDF(){
 
         // Details: line 1
         doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(184,169,138);
-        if(det1) doc.text(pdfTxt(det1).substring(0,95),tx,startY+16);
+        if(det1) doc.text(pdfTxt(det1).substring(0,125),tx,startY+16);
 
         // Details: line 2
-        if(det2) doc.text(pdfTxt(det2).substring(0,95),tx,startY+21);
+        if(det2) doc.text(pdfTxt(det2).substring(0,125),tx,startY+21);
+
+        // Details: line 3 — the category's own fields, wrapped to two lines max
+        if(det3Lines.length){
+          doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(152,140,112);
+          det3Lines.forEach(function(ln,li){ doc.text(ln,tx,startY+26+li*4.5); });
+        }
 
         // Short description
         if(item.shortDesc){
           doc.setFontSize(7);doc.setTextColor(120,110,80);doc.setFont('helvetica','italic');
-          doc.text(pdfTxt(item.shortDesc).substring(0,110),tx,startY+26);
+          doc.text(pdfTxt(item.shortDesc).substring(0,140),tx,startY+26+d3h);
         }
 
         // VALUE — right-aligned, prominent
