@@ -2177,11 +2177,18 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.9.0';             // semantic version — quote in bug reports
-const APP_VERSION_DATE = '2026-10-30';   // release date of this build
+const APP_VERSION = '1.9.1';             // semantic version — quote in bug reports
+const APP_VERSION_DATE = '2026-10-31';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.9.1', date:'31 Oct 2026', changes:[
+    'Exporting a PDF now asks which collections to include instead of always exporting everything, and it opens on the collection you are looking at. A catalogue of one collection is a document you would actually read.',
+    'Catalogue entries now list the category details you recorded. A diecast model shows its scale, maker, model, year and serial; a locomotive shows its rolling stock type, livery, railway and gauge. None of that used to appear.',
+    'Prices in the catalogue are labelled Estimated value and Bought for, rather than an unlabelled figure, and there is a tick box to leave prices out altogether if you are passing the PDF to someone.',
+    'An item with a purchase price but no estimated value now shows that price. It previously showed nothing at all.',
+    'Quantity now appears for items you hold more than one of.',
+  ]},
   { v:'1.9.0', date:'30 Oct 2026', changes:[
     'Exports are far quicker. A large collection that used to take about fifteen minutes now finishes in roughly ninety seconds, and a progress bar stays on screen for the whole job showing how many photos and items are left and about how long to go.',
     'Catalogue PDF photos are bigger, keep their proper shape instead of being squashed, and line up neatly when an item has more than one photo.',

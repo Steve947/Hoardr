@@ -4,6 +4,26 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.9.1] · 2026-10-31
+
+### Added
+- Export scope. `exportPDF` and `exportInsuranceSchedule` now take a list of collection ids; the PDF chooser has a checkbox list ("All collections" plus one row per collection with its item count) defaulting to `selectedCollectionId`. Inside each export the collection, group and item arrays are filtered once at the top and everything downstream reads from those, so summary tables, totals, item numbering and the unvalued count all follow the scope. An empty list is treated as unscoped, so a full export is unchanged. Filenames carry the scope.
+- Category fields in the catalogue. A third detail line generated from `CAT_FIELDS` and `item.catFieldVals`, wrapped to two lines at 150mm. Covers all 33 categories and any added later. None of this data appeared in the catalogue before.
+- Quantity on the catalogue detail line when `qtyOf(item) > 1`.
+- "Include what you paid and estimated values" tick box on the catalogue export, on by default. The catalogue is described in the UI as good for showing off, and share pages already treat values and prices as opt-in.
+- `.well-known/assetlinks.json` and `.nojekyll` added to the publish allowlist. Both files had existed since June but `.gitignore` is an allowlist and neither was in it, so neither had ever been published; `hoardrapp.com/.well-known/assetlinks.json` returned 404. Without it a Trusted Web Activity shows a browser address bar over the app. Android package id set to `com.hoardrapp.android`.
+- `/app/*.before*`, `*.bak` and `*.orig` re-ignored. `!/app/` had been sweeping the `index.html.before.*` safety copies into the published site.
+
+### Changed
+- Catalogue prices are labelled "Estimated value" and "Bought for" instead of a bare gold figure with a terse "Paid:" beneath.
+- Catalogue cost now uses `_itemCost()`, which adds postage and honours the diecast total-cost field, so the catalogue and the insurance schedule can no longer state different costs for the same item.
+- Catalogue detail truncations raised now the text column is wider: names 52 to 64 characters, detail lines 95 to 125, descriptions 110 to 140.
+
+### Fixed
+- An item with a purchase price but no estimated value printed no pricing at all in the catalogue, because the purchase price was nested inside the `if(item.value)` test.
+- Catalogue photos: photo one was a thumbnail beside the text while photos two onward were a separate gallery below the whole text block, so a two-photo item was twice the height of a one-photo item with the right of the row empty. All photos now sit on one square 34mm grid, two across, at one origin, and the text column starts at a fixed x for every row. Items with no photo get a placeholder tile so the grid stays regular. A two-photo row drops from 78mm to 40mm.
+- Tiles were 40x34 landscape while the photos are portrait phone shots, so each was fitted by height and left floating as a narrow strip in a wide frame. Square tiles suit both orientations.
+
 ## [1.9.0] · 2026-10-30
 
 ### Added

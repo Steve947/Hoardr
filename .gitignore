@@ -26,6 +26,8 @@
 !/mining-catalog.json
 !/story/
 !/media/
+!/.nojekyll
+!/.well-known/
 !/app/
 
 # !/app/ re-includes the whole app folder, which also swept up the
