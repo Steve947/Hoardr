@@ -3219,6 +3219,9 @@ function startRealtimeSync() {
       setSyncStatus('synced');
       render();
       armUpgradeNudge();
+      // Only on server-confirmed data. The cached first delivery can be stale
+      // or empty, and writing from it would record the wrong month total.
+      if(snap.metadata && !snap.metadata.fromCache) _ensureMonthlySnapshot();
     }, err => setSyncStatus('offline'));
 }
 
@@ -5759,6 +5762,26 @@ async function _writeMonthlySnapshot(){
     const km=_monthKey();
     await firestoreDb.doc(`${userPath()}/snapshots/${km}`).set({ month:km, totalValue:Math.round(tv*100)/100, totalCost:Math.round(tc*100)/100, itemCount:db.items.length, currency:(typeof curCode==='function'?curCode():'AUD'), at:new Date().toISOString() },{merge:true});
   }catch(e){ console.warn('snapshot write failed (non-fatal):', e); }
+}
+// Snapshots were only ever written when someone opened the dashboard, so a
+// month in which nobody opened it recorded nothing at all, and the monthly
+// report's delta then silently spanned a longer period than it claimed.
+// This records one on the first SERVER sync of a session when the current
+// month has none: one read per session, and a write only on the first session
+// of each month. Deliberately skipped while db.items is empty, so a slow or
+// cached first paint can never stamp a zero over a real month.
+let _snapEnsured = false;
+async function _ensureMonthlySnapshot(){
+  if(_snapEnsured) return;
+  if(!(firebaseMode && currentUser)) return;
+  if(!db.items.length) return;
+  _snapEnsured = true;
+  try{
+    const ref = firestoreDb.doc(`${userPath()}/snapshots/${_monthKey()}`);
+    const cur = await ref.get();
+    if(cur.exists) return;          // already recorded; the dashboard keeps it current
+    await _writeMonthlySnapshot();
+  }catch(e){ console.warn('snapshot ensure failed (non-fatal):', e); }
 }
 async function _loadSnapshots(){
   if(!(firebaseMode && currentUser)) return [];
