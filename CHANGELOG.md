@@ -4,6 +4,13 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.9.3] · 2026-11-02
+
+### Added
+- `suPass2` confirm field on signup. `signUp()` now rejects a mismatch and a password under 6 characters before calling `createUserWithEmailAndPassword`, and `pwCheck()` gives live feedback under the field while typing. Previously a mistyped password was accepted silently and the account could only be recovered by a reset email, which is worse now that confirmation is required.
+- `pwToggle()` reveal control on `siPass`, `suPass` and `suPass2`. The caret position is saved and restored because changing an input's `type` sends it to the end in several browsers.
+- `PW_EYE` / `PW_EYE_OFF` inline SVG icons. An emoji eye renders in full colour on some platforms and looked wrong against the dark field; these inherit the button's colour.
+
 ## [1.9.2] · 2026-11-02
 
 ### Added
