@@ -1611,7 +1611,9 @@ const TEST_PRO_EMAILS = [
 // free after GRANTED_PRO_UNTIL. The server (functions/index.js) enforces the same
 // window; this client check only mirrors it so the UI matches.
 const GRANTED_PRO_UNTIL = '2027-09-15';   // granted 15 Sep 2026; valid through this date
-const GRANTED_PRO_EMAILS = ['kateisgreatb18@gmail.com', 'celeste.bond@bigpond.com', 'gazza.321@bigpond.com'];
+// The last address is the Google Play review account (added 2 Nov 2026), so a
+// reviewer sees the Pro build rather than hitting the free AI limit mid review.
+const GRANTED_PRO_EMAILS = ['kateisgreatb18@gmail.com', 'celeste.bond@bigpond.com', 'gazza.321@bigpond.com', 'gigantostudio+playreview@gmail.com'];
 function isGrantedProNow(email){
   if(!email) return false;
   if(!GRANTED_PRO_EMAILS.includes(email.toLowerCase())) return false;
