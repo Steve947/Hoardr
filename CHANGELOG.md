@@ -4,6 +4,23 @@ All notable changes to Hoardr are recorded here. Versioning is `MAJOR.MINOR.PATC
 with the release date; the same list drives the in-app **What's New** panel
 (Profile → "What's new"). Newest first.
 
+## [1.9.2] · 2026-11-02
+
+### Added
+- Email confirmation gate. Confirming is required for the three actions that cost money or reach beyond the account: `aiAssist`, `createCheckoutSession` and creating a document in `/shares`. It is NOT required to sign in or to use the collection, because the Firestore rules already scope every read and write to `request.auth.uid`, so an unconfirmed account can only ever reach its own data. Walling the front door would have cost signups and made Play review harder for no security gain.
+- `requireVerified()` in `functions/index.js`, reading `email_verified` from the signed ID token and throwing `failed-precondition` with `details.reason = "email_unverified"`. Called at the top of `aiAssist` and `createCheckoutSession`.
+- `create` on `/shares` now also requires `request.auth.token.email_verified == true`. `update` and `delete` deliberately do not, so somebody who can no longer create a share can still refresh or revoke an old one.
+- `VERIFY_EXEMPT_UIDS`, the same three pre-gate uids in `functions/index.js`, `firestore.rules` and `app/index.html`. Three accounts (David, Kate, Celeste) have never confirmed; without the list, deploying this would have taken features away from people who already had them. Each line is deleted once that person confirms and the list is meant to end up empty.
+- `#verifyBar` under the header with Resend and "I have confirmed". `verifyRecheck()` does `user.reload()` **and** `getIdToken(true)`, because the cached ID token keeps reporting the old `email_verified` value until it is forced to refresh, so without both the user confirms and the app still refuses them.
+- `_verifyGate()` wrapped around the single `_aiFn()` choke point, so all AI entry points are covered by one check, and inline guards in `createShare`, `startCheckout` and `startTopup`. Each re-checks once before refusing, so confirming in another tab is not punished.
+
+### Changed
+- Resend now has a 60 second cooldown. The profile row says "Email confirmed" / "Email not confirmed" and its link calls `verifyResend()` rather than the older `resendVerification()`.
+- The signup toast now says what confirming unlocks instead of just asking for it.
+
+### Notes
+- Unchanged on purpose: the Firestore rules on `users/{uid}/**`. Requiring confirmation there would have locked three existing people out of their own collections, and it buys nothing the uid scoping does not already provide.
+
 ## [1.9.1] · 2026-10-31
 
 ### Added

@@ -728,6 +728,20 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
   </div>
 </header>
 
+<!-- Email confirmation bar. Deliberately NOT a wall: the collection stays fully
+     usable unconfirmed, because Firestore rules already scope every read and
+     write to the signed-in uid. Only the three things that cost money or go
+     public are gated (AI, share links, checkout) and the copy says which. -->
+<div id="verifyBar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 24px;background:linear-gradient(180deg,rgba(201,168,76,.15),rgba(201,168,76,.05));
+  border-bottom:1px solid var(--border2);font-size:13px;color:var(--text)">
+  <span style="font-size:15px">&#9993;</span>
+  <span style="flex:1;min-width:220px">Confirm your email to unlock AI features, share links and Pro.
+    We sent a link to <strong id="verifyBarEmail">your address</strong>.</span>
+  <button class="btn btn-gold btn-sm" onclick="verifyResend()">Resend</button>
+  <button class="btn btn-outline btn-sm" onclick="verifyRecheck()">I have confirmed</button>
+</div>
+
 <div class="app-layout">
   <div class="sidebar" id="sidebar">
     <!-- Mobile close button -->
@@ -2177,11 +2191,16 @@ async function smartImportApply(){
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
-const APP_VERSION = '1.9.1';             // semantic version — quote in bug reports
-const APP_VERSION_DATE = '2026-10-31';   // release date of this build
+const APP_VERSION = '1.9.2';             // semantic version — quote in bug reports
+const APP_VERSION_DATE = '2026-11-02';   // release date of this build
 const TOS_VERSION = '1.0';   // Terms of Use / Privacy version accepted at sign up
 // Newest first. Each: {v, date, changes:[...]}. Drives the What's New modal.
 const CHANGELOG = [
+  { v:'1.9.2', date:'2 Nov 2026', changes:[
+    'Your email address now needs confirming before you can use AI features, create share links or subscribe. Your collection itself is untouched: you can add, edit, photograph and export everything without confirming.',
+    'A bar at the top of the screen shows while your address is unconfirmed, with a Resend button and an I have confirmed button so you do not have to sign out and back in for it to take effect.',
+    'Why: AI actions are billed per call and a share link is a public page, so both needed an address we know is real. A mistyped address also used to mean a collection nobody could ever recover.',
+  ]},
   { v:'1.9.1', date:'31 Oct 2026', changes:[
     'Exporting a PDF now asks which collections to include instead of always exporting everything, and it opens on the collection you are looking at. A catalogue of one collection is a document you would actually read.',
     'Catalogue entries now list the category details you recorded. A diecast model shows its scale, maker, model, year and serial; a locomotive shows its rolling stock type, livery, railway and gauge. None of that used to appear.',
@@ -2298,7 +2317,9 @@ async function _refreshAiQuota(){
 function _aiFn(){
   const call = fnSvc.httpsCallable('aiAssist');
   return function(payload){
-    return call(payload).then(function(resp){
+    // Unconfirmed accounts are rejected by the server too; this just saves the
+    // round trip and gives the caller a sentence worth showing.
+    return _verifyGate('AI features').then(function(){ return call(payload); }).then(function(resp){
       _refreshAiQuota().then(function(){ try{ _renderProUI(); }catch(_){} });
       return resp;
     });
@@ -2446,6 +2467,7 @@ function _renderUpgrade(){
 }
 async function startCheckout(plan){
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
+  if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before subscribing','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
   try{
     const r=await fnSvc.httpsCallable('createCheckoutSession')({plan:plan});
@@ -2466,6 +2488,7 @@ function openTopup(){
 }
 async function startTopup(){
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
+  if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before buying credits','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
   try{
     const r=await fnSvc.httpsCallable('createCheckoutSession')({plan:'topup'});
@@ -3068,6 +3091,7 @@ function setupAuthListener() {
       startRealtimeSync();
       _handleBillingReturn();
       setTimeout(maybeShowOnboarding, 600);
+      renderVerifyBar();
     } else {
       currentUser = null;
       document.getElementById('authScreen').style.display = 'flex';
@@ -3135,7 +3159,7 @@ async function signUp() {
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     if (name) await cred.user.updateProfile({ displayName: name });
     try { await firestoreDb.doc('users/'+cred.user.uid+'/settings/prefs').set({ tosAccepted:{ version:TOS_VERSION, at: firebase.firestore.FieldValue.serverTimestamp() } }, {merge:true}); } catch(_e){}
-    try { await cred.user.sendEmailVerification(); showToast('Account created — check your email to verify your address','✉️'); } catch(_e){}
+    try { await cred.user.sendEmailVerification(); showToast('Account created. Check your email and confirm your address to unlock AI, sharing and Pro','✉️'); } catch(_e){}
   } catch(e) { authError(friendlyAuthError(e)); }
 }
 async function signInGoogle() {
@@ -3447,6 +3471,9 @@ function _openShareUI(){
 }
 async function createShare(){
   if(!(firebaseMode&&currentUser)){ showToast('Sign in to share','⚠️'); return; }
+  // A share page is public, so this is the one write that leaves the account.
+  // firestore.rules refuses it for unconfirmed addresses; stop here first.
+  if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address to create share links','\ud83d\udd12'); return; }
   if(!shareSubject){ return; }
   const showValue=document.getElementById('shShowValue').checked;
   const showPrice=document.getElementById('shShowPrice').checked;
@@ -4723,8 +4750,8 @@ function openProfile(){
   const isGoogle=(currentUser.providerData||[]).some(pr=>pr&&pr.providerId==='google.com');
   document.getElementById('pfPasswordRow').style.display=isGoogle?'none':'block';
   const vr=document.getElementById('pfVerifyRow');
-  if(currentUser.emailVerified){ vr.innerHTML='<span style="color:var(--green2)">✓ Email verified</span>'; }
-  else { vr.innerHTML='<span style="color:var(--text3)">Email not verified — </span><a href="#" onclick="resendVerification();return false" style="color:var(--gold2)">resend verification</a>'; }
+  if(currentUser.emailVerified){ vr.innerHTML='<span style="color:var(--green2)">✓ Email confirmed</span>'; }
+  else { vr.innerHTML='<span style="color:var(--text3)">Email not confirmed. </span><a href="#" onclick="verifyResend();return false" style="color:var(--gold2)">Resend the email</a>'; }
   const _v = document.getElementById('pfVersion');
   if (_v) _v.innerHTML = 'Hoardr v' + APP_VERSION + ' · ' + APP_VERSION_DATE
     + ' · <a href="#" onclick="closeModal(\'profileModal\');openWhatsNew();return false" style="color:var(--gold2)">What&rsquo;s new</a>';
@@ -4779,6 +4806,65 @@ async function resendVerification(){
   if(!currentUser) return;
   try{ await currentUser.sendEmailVerification(); showToast('Verification email sent','✉️'); }
   catch(e){ showToast('Failed — '+((e&&e.message)||e),'⚠️'); }
+}
+
+// ── Email confirmation gate (2 Nov 2026) ──────────────────────────────
+// Confirming is advisory for your own collection and REQUIRED for the three
+// actions that cost money or reach the public: AI calls, share links, and
+// checkout. This layer is only so the user sees why. The real enforcement is
+// requireVerified() in functions/index.js and the create rule on /shares in
+// firestore.rules, both of which read email_verified from the signed token.
+// The listed uids are accounts that predate the gate; the same list appears in
+// both server files and all three copies shrink as people confirm.
+const VERIFY_EXEMPT_UIDS = ['MTnkpTYXbAfGtO1GN4SVyNaPFO12','UWsPzDMoYYfXy7IMngWPjaiJbT83','TCy7IF8jcMdp31utYu9o3y7wdGE2'];
+function isVerified(){
+  if(!(firebaseMode&&currentUser)) return true;   // local mode has no account to confirm
+  if(currentUser.emailVerified) return true;
+  return VERIFY_EXEMPT_UIDS.indexOf(currentUser.uid)>=0;
+}
+function renderVerifyBar(){
+  const bar=document.getElementById('verifyBar'); if(!bar) return;
+  const show=!!(firebaseMode&&currentUser&&!isVerified());
+  bar.style.display=show?'flex':'none';
+  if(show){ const el=document.getElementById('verifyBarEmail'); if(el) el.textContent=currentUser.email||'your address'; }
+}
+let _verifySentAt=0;
+async function verifyResend(){
+  if(!currentUser) return;
+  const wait=60000-(Date.now()-_verifySentAt);
+  if(wait>0){ showToast('Already sent. Try again in '+Math.ceil(wait/1000)+' seconds','⏳'); return; }
+  try{
+    await currentUser.sendEmailVerification();
+    _verifySentAt=Date.now();
+    showToast('Confirmation email sent to '+currentUser.email+'. Check your spam folder too','✉️');
+  }catch(e){ showToast('Could not send it. '+((e&&e.message)||e),'⚠️'); }
+}
+// The ID token keeps saying unverified until it is refreshed, so a reload of
+// the user AND a forced token refresh are both needed before deciding.
+async function verifyRecheck(silent){
+  if(!currentUser) return false;
+  try{
+    await currentUser.reload();
+    currentUser=auth.currentUser;
+    await currentUser.getIdToken(true);
+  }catch(e){ if(!silent) showToast('Could not check that just now','⚠️'); return false; }
+  renderVerifyBar();
+  if(isVerified()){ if(!silent) showToast('Email confirmed. Everything is unlocked','✅'); return true; }
+  if(!silent) showToast('Not confirmed yet. Open the link in the email, then tap again','⏳');
+  return false;
+}
+// Re-checks once before refusing, so somebody who confirmed in another tab is
+// not told off for it. Resolves on success, throws a typed error otherwise so
+// callers can surface the message they already surface for server errors.
+function _verifyGate(what){
+  if(isVerified()) return Promise.resolve(true);
+  return verifyRecheck(true).then(function(ok){
+    if(ok) return true;
+    renderVerifyBar();
+    const e=new Error('Confirm your email address to use '+what+'. There is a Resend button in the bar at the top of the screen.');
+    e.code='failed-precondition'; e.details={reason:'email_unverified'};
+    throw e;
+  });
 }
 async function deleteAccount(){
   if(!currentUser) return;
