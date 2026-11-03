@@ -36,3 +36,12 @@
 /app/*.bak
 /app/*.orig
 !/welcome/
+
+# The Android signing key and build output must NEVER reach the public site.
+# These are pure ignores and sit last, so they win over any re-include above.
+*.keystore
+*.jks
+/android/
+/build-android.bat
+/fix-play-function.bat
+/fix-java64.bat
