@@ -1493,7 +1493,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <div class="tour-card">📈 &nbsp;<b style="color:var(--gold2)">Monthly value reports</b> <span style="color:var(--text3);font-size:12px">a monthly note on what your collection is worth.</span></div>
         </div>
         <div style="text-align:center;margin-top:13px">
-          <button class="btn btn-gold btn-sm" onclick="_onboardStartTrial()" style="width:100%;justify-content:center">Start 7 day free trial</button>
+          <button id="onbTrialBtn" class="btn btn-gold btn-sm" onclick="_onboardStartTrial()" style="width:100%;justify-content:center">Start 7 day free trial</button>
           <p style="font-size:10.5px;color:var(--text3);margin:8px 0 0">7 days free, then A$6.99/month or A$49.99/year. Cancel anytime.</p>
         </div>
       </div>
@@ -2439,7 +2439,47 @@ function _notifPermission(){ try{ return (typeof Notification!=='undefined') ? N
 function _isInstalledPWA(){ try{ return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true; }catch(e){ return false; } }
 // ── Billing / Hoardr Pro (Stripe hosted Checkout + portal) ──
 let _upgPlan='annual';
-function openUpgrade(){ _upgPlan='annual'; _renderUpgrade(); openModal('upgradeModal'); }
+// ── Android app (Google Play) build ────────────────────────────────────────
+// Google Play requires digital goods bought inside a Play app to go through
+// Play Billing. Until Play Billing is wired up, the Android app must expose no
+// Stripe purchase path at all: no checkout, no top-ups, no billing portal, and
+// no prompt that points at one. The website is unchanged. Remove these guards
+// only when the Digital Goods path is live and tested on a Play track.
+// Detection: a TWA launch carries an android-app:// referrer, which we latch
+// for the session (sessionStorage, not localStorage, so it never leaks into
+// ordinary Chrome browsing on the same phone). The Digital Goods API is a
+// second signal that only exists in installed Android contexts.
+const IS_ANDROID_APP = (function(){
+  try{
+    if((document.referrer||'').indexOf('android-app://com.hoardrapp.android')===0){
+      try{ sessionStorage.setItem('hoardr_android_app','1'); }catch(_){}
+      return true;
+    }
+    if(sessionStorage.getItem('hoardr_android_app')==='1') return true;
+  }catch(_){}
+  try{ if(typeof window.getDigitalGoodsService==='function') return true; }catch(_){}
+  return false;
+})();
+function _hideAndroidPurchaseUI(){
+  try{ var b=document.getElementById('onbTrialBtn'); if(b) b.style.display='none'; }catch(_){}
+}
+if(IS_ANDROID_APP){
+  _hideAndroidPurchaseUI();
+  try{ document.addEventListener('DOMContentLoaded',_hideAndroidPurchaseUI); }catch(_){}
+}
+function _proComingSoon(){
+  const box=document.getElementById('upgradeBody');
+  if(box){
+    box.innerHTML='<div style="text-align:center;margin-bottom:12px"><span style="font-size:32px">\u2728</span></div>'
+      +'<div style="text-align:center;font-size:14px;color:var(--text);margin-bottom:8px">Pro is coming to the Android app</div>'
+      +'<div style="text-align:center;font-size:12px;color:var(--text3);line-height:1.55">Everything you have catalogued is safe and stays yours. The Pro tools will be available in the app shortly.</div>';
+  }
+  openModal('upgradeModal');
+}
+function openUpgrade(){
+  if(IS_ANDROID_APP){ _proComingSoon(); return; }
+  _upgPlan='annual'; _renderUpgrade(); openModal('upgradeModal');
+}
 // ── User feedback ──
 function openFeedback(){
   const t=document.getElementById('fbType'); if(t) t.value='idea';
@@ -2490,6 +2530,7 @@ function _renderUpgrade(){
     +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">7 days free, then '+(annual?'A$49.99/year':'A$6.99/month')+'. Cancel anytime in your account. Billed in AUD via Stripe.</p>';
 }
 async function startCheckout(plan){
+  if(IS_ANDROID_APP){ _proComingSoon(); return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before subscribing','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
@@ -2500,6 +2541,7 @@ async function startCheckout(plan){
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
 function openTopup(){
+  if(IS_ANDROID_APP){ _proComingSoon(); return; }
   const box=document.getElementById('topupBody');
   if(box){
     box.innerHTML='<div style="text-align:center;margin-bottom:6px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">A$2.99</span></div>'
@@ -2511,6 +2553,7 @@ function openTopup(){
   openModal('topupModal');
 }
 async function startTopup(){
+  if(IS_ANDROID_APP){ _proComingSoon(); return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before buying credits','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
@@ -2521,6 +2564,7 @@ async function startTopup(){
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('failed-precondition')>=0) showToast('Top-ups are for Pro subscribers','🔒'); else if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
 async function openBillingPortal(){
+  if(IS_ANDROID_APP){ showToast('Manage your subscription at hoardrapp.com','\u2139\ufe0f'); return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   showToast('Opening your billing portal…','💳');
   try{
@@ -2533,6 +2577,13 @@ function _renderProUI(){
   const box=document.getElementById('pfPro'); if(!box) return;
   const _lim=_aiUsage.limit||(isProUser?50:5), _used=_aiUsage.used||0, _left=Math.max(0,_lim-_used);
   const _usageLine='<div style="font-size:11px;color:var(--text3);margin:6px 0 2px">AI actions this month: <strong style="color:var(--text2)">'+_used+' of '+_lim+'</strong> used'+(_left<=0?' (resets on the 1st)':'')+'</div>';
+  if(IS_ANDROID_APP){
+    box.innerHTML=(isProUser
+        ? '<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">\u2713 You\'re on Hoardr Pro</div>'
+        : '<p style="font-size:12px;color:var(--text3);margin-bottom:2px">Pro features are coming to the Android app shortly.</p>')
+      +_usageLine;
+    return;
+  }
   if(isProUser){
     const _creditLine=(_aiCredits>0)?'<div style="font-size:11px;color:var(--gold2);margin:2px 0 0">Top-up credits: <strong>'+_aiCredits+'</strong> left (never expire)</div>':'';
     box.innerHTML='<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">✓ You\'re on Hoardr Pro</div>'
@@ -2555,6 +2606,7 @@ let _upNudgeArmed=false;
 function armUpgradeNudge(){ if(_upNudgeArmed) return; _upNudgeArmed=true; setTimeout(maybeShowUpgradeNudge,6000); }
 function maybeShowUpgradeNudge(){
   try{
+    if(IS_ANDROID_APP) return;                            // Play build: no purchase prompts
     if(isProUser || !currentUser) return;                 // subscribers/owners: never
     if((db.items||[]).length < 3) return;                 // only nudge engaged users
     try{ if(!localStorage.getItem('hoardr_onboarded')) return; }catch(e){}
