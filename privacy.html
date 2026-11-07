@@ -50,20 +50,21 @@ footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--border);color
 <header>
   <div class="brand"><div class="mark">H</div><div class="brand-name">Hoardr</div></div>
   <h1>Privacy Policy</h1>
-  <p class="dates">Version 1.2 &nbsp;·&nbsp; Last updated 4 November 2026 &nbsp;·&nbsp; Effective 4 November 2026</p>
+  <p class="dates">Version 1.3 &nbsp;·&nbsp; Last updated 7 November 2026 &nbsp;·&nbsp; Effective 7 November 2026</p>
 </header>
 
 <p class="lede">Hoardr is a collection manager for hobbyist collectors. This policy explains what we
 store, where it lives, who else touches it, and what we will never do with it.</p>
 
 <div class="card good">
-  <strong>The short version</strong>
-  <ul style="margin:10px 0 0;padding-left:20px">
-    <li>We store your email address and whatever you choose to catalogue.</li>
-    <li>We do <strong>not</strong> sell or share your personal information, show advertising, or run analytics or tracking of any kind.</li>
-    <li>Your collection is readable only by your own account.</li>
-    <li>You can export everything, or delete your account and all its data, from inside the app at any time.</li>
-  </ul>
+  <strong>Summary</strong>
+  <p style="margin:10px 0 0"><strong>Scope.</strong> This covers the Hoardr app and hoardrapp.com, run by Giganto Studio in Australia.</p>
+  <p style="margin:10px 0 0"><strong>What we collect.</strong> Your email address, whatever you choose to catalogue, your display preferences, and basic security records such as sign-in times and IP address.</p>
+  <p style="margin:10px 0 0"><strong>Who else is involved.</strong> Google Firebase stores it. Payments are handled by Stripe on the website, or by Google Play if you subscribe in the Android app. The optional AI features send the one item you choose to Google's Gemini API. Nobody else.</p>
+  <p style="margin:10px 0 0"><strong>What we never do.</strong> We do not sell or share your personal information, show advertising, or run analytics or tracking of any kind. Your collection is readable only by your own account.</p>
+  <p style="margin:10px 0 0"><strong>Your choices.</strong> Export everything to a file, delete any part of your collection, or delete your account and all its data, all from inside the app at any time.</p>
+  <p style="margin:10px 0 0"><strong>Questions or complaints.</strong> Email <a href="mailto:privacy@hoardrapp.com">privacy@hoardrapp.com</a>. If we cannot resolve it, you can complain to the privacy regulator where you live.</p>
+  <p style="margin:12px 0 0;font-size:14px;color:var(--muted)">The full policy below sets all of this out in detail.</p>
 </div>
 
 <div class="toc">
@@ -75,6 +76,7 @@ store, where it lives, who else touches it, and what we will never do with it.</
     <li><a href="#storage">Device storage and cookies</a></li>
     <li><a href="#where">Where your data is stored</a></li>
     <li><a href="#third">Third parties</a></li>
+    <li><a href="#payments">Payments</a></li>
     <li><a href="#never">What we never do</a></li>
     <li><a href="#rights">Your rights and controls</a></li>
     <li><a href="#regional">Regional rights</a></li>
@@ -128,6 +130,7 @@ purpose:</p>
   <tr><td>Storing and syncing your collection</td><td>Collection content, photographs</td><td>Performance of a contract</td></tr>
   <tr><td>Remembering your preferences</td><td>Currency, onboarding state</td><td>Performance of a contract</td></tr>
   <tr><td>Preventing abuse and fraud</td><td>IP address, reCAPTCHA signals, sign-in events</td><td>Legitimate interests — keeping the service available and secure</td></tr>
+  <tr><td>Taking payment for Hoardr Pro</td><td>Your email, subscription status and renewal date</td><td>Performance of a contract</td></tr>
   <tr><td>Responding to your support requests</td><td>Your email and message</td><td>Legitimate interests — supporting our users</td></tr>
 </table>
 
@@ -137,7 +140,7 @@ app works offline and remembers your settings:</p>
 <table>
   <tr><th>Technology</th><th>What it holds</th><th>Why</th></tr>
   <tr><td>IndexedDB (Firestore offline cache)</td><td>A copy of your collection, including photo thumbnails</td><td>So the app loads instantly and works without a connection</td></tr>
-  <tr><td><code>localStorage</code></td><td><code>collectorsVault</code> (local collection data), <code>hoardrCurrency</code>, <code>hoardr_onboarded</code>, <code>hoardr_install_dismissed</code></td><td>Preferences and local-only mode</td></tr>
+  <tr><td>Browser local storage</td><td>Your display preferences, whether you have seen the introduction, and a local copy of your collection if you use Hoardr without an account</td><td>Preferences and local-only mode</td></tr>
   <tr><td>Firebase auth tokens</td><td>Your signed-in session</td><td>So you are not signed out on every visit</td></tr>
   <tr><td>Google reCAPTCHA cookies</td><td>Set by Google on <code>google.com</code></td><td>Distinguishing genuine users from bots</td></tr>
 </table>
@@ -146,8 +149,7 @@ browser. Doing so removes the offline copy from that device.</p>
 
 <h2 id="where">5. Where your data is stored</h2>
 <p>Hoardr runs on Google Firebase. Collection records are held in Google Cloud Firestore and
-photographs in Google Cloud Storage in the <strong>United States</strong> (region
-<code>us-east1</code>).</p>
+photographs in Google Cloud Storage, in the <strong>United States</strong>.</p>
 <p>If you are outside the United States — including in Australia, the UK or the EEA — your personal
 information is transferred to and stored in the United States. Google LLC provides these services
 under its own data-protection terms, which include the European Commission's Standard Contractual
@@ -162,36 +164,64 @@ marketing platform.</p>
   <tr><th>Service</th><th>Purpose</th><th>Data involved</th></tr>
   <tr><td>Google Firebase (Google LLC)</td><td>Authentication, database, photo storage</td><td>Email, collection content, photos, IP address</td></tr>
   <tr><td>Google reCAPTCHA v3 / App Check</td><td>Blocking automated abuse</td><td>Device and interaction signals</td></tr>
-  <tr><td>Cloudflare CDN</td><td>Serving three open-source libraries used for Excel and PDF export</td><td>IP address, as with any web request</td></tr>
+  <tr><td>Cloudflare CDN</td><td>Serving open source libraries used for Excel and PDF export</td><td>IP address, as with any web request</td></tr>
   <tr><td>GitHub Pages</td><td>Hosting the website</td><td>IP address, as with any web request</td></tr>
-  <tr><td>Stripe (Stripe, Inc.)</td><td>Processing Pro subscription payments</td><td>Your email and the payment details you enter with Stripe; we never see or store your full card number</td></tr>
+  <tr><td>Stripe (Stripe, Inc.)</td><td>Processing Pro subscriptions bought on the website</td><td>Your email and the payment details you enter with Stripe; we never see or store your card number</td></tr>
+  <tr><td>Google Play billing (Google LLC)</td><td>Processing Pro subscriptions bought in the Android app</td><td>Handled entirely by Google; we receive only a purchase reference and your subscription status</td></tr>
   <tr><td>Google Gemini API (Google LLC)</td><td>Powering the optional AI features (value estimates, photo identify, notes tidy, import)</td><td>Only the specific item you run the AI on: its photo or text and the details you provide</td></tr>
 </table>
-<p>The AI features send the item you choose to Google's Gemini API to generate your result. That content is processed to return the result to you; it is not used to advertise to you. Stripe is used only when you start a Pro trial or subscription.</p>
+<p>The AI features send the item you choose to Google's Gemini API to generate your result. That content is processed to return the result to you; it is not used to advertise to you. Payment processors are involved only if you start a Pro trial or subscription, and are covered in the next section.</p>
 <p>Hoardr also offers a "Check sold prices" link that opens an eBay search in a new tab. This happens
 only when you click it and passes only the item name. eBay's own privacy policy applies from that
 point.</p>
 
-<h2 id="never">7. What we never do</h2>
+<h2 id="payments">7. Payments</h2>
+<p>Hoardr Pro can be bought in two different places, and they work differently. In both cases the
+payment itself is handled by the payment provider, not by us, and we never see or store your card
+number.</p>
+
+<h3>If you subscribe on the website</h3>
+<p>Subscriptions started at hoardrapp.com are processed by <strong>Stripe, Inc.</strong> You enter your
+card details on Stripe's own checkout page rather than on ours, and Stripe handles them under
+<a href="https://stripe.com/privacy" rel="noopener">Stripe's privacy policy</a>. What comes back to us
+is your email address, whether the subscription is active, when the current period ends, and a
+reference that lets us open your billing page for you.</p>
+
+<h3>If you subscribe in the Android app from Google Play</h3>
+<p>Purchases made inside the Android app are handled by <strong>Google Play's billing system</strong>.
+Google is the seller of record for those purchases, takes the payment and handles refunds, under
+<a href="https://policies.google.com/privacy" rel="noopener">Google's privacy policy</a> and the Google
+Play Terms of Service. We never receive your payment details in any form. Google passes us a purchase
+reference and the status of your subscription, which we use only to unlock Pro on your account and to
+keep it in step when you renew, cancel, or are refunded.</p>
+
+<h3>Which one applies to you</h3>
+<p>It depends on where you subscribed, not on where you use Hoardr. A subscription bought on the
+website is managed and cancelled on the website. A subscription bought through Google Play is managed
+and cancelled in your Google Play account, and we cannot cancel it for you.</p>
+
+<h2 id="never">8. What we never do</h2>
 <table>
   <tr><th>We do not</th><th>Meaning</th></tr>
   <tr><td>Sell your personal information</td><td>We have never sold personal information and do not intend to. For the purposes of the CCPA/CPRA, we do not "sell" or "share" personal information as those terms are defined.</td></tr>
   <tr><td>Show advertising</td><td>There are no ad networks in Hoardr.</td></tr>
   <tr><td>Run analytics or tracking</td><td>No Google Analytics, no tracking pixels, no behavioural SDKs.</td></tr>
-  <tr><td>Read or share your collection</td><td>Access is restricted by security rules to your own account.</td></tr>
+  <tr><td>Read or share your collection</td><td>Access is restricted to your own account.</td></tr>
   <tr><td>Use your photographs</td><td>They are not used for training, promotion, or any purpose other than displaying them back to you.</td></tr>
   <tr><td>Profile you or make automated decisions</td><td>No automated decision-making with legal or similarly significant effects.</td></tr>
 </table>
 
-<h2 id="rights">8. Your rights and controls</h2>
+<h2 id="rights">9. Your rights and controls</h2>
 <h3>Export everything</h3>
 <p><strong>Save to Device</strong> produces a complete JSON file of your collections, groups, items
 and photographs — readable without Hoardr. This satisfies your right to data portability.</p>
 
 <h3 id="delete">Delete your account and data</h3>
 <p><strong>In the app:</strong> Profile → Delete my account &amp; all data permanently removes your
-account, every collection, group and item, and every photograph in storage, and, if you have a
-subscription, cancels it. It is immediate and cannot be undone, so export first if you want a copy.</p>
+account, every collection, group and item, and every photograph in storage. It is immediate and
+cannot be undone, so export first if you want a copy. If you subscribed on the website, deleting your
+account also cancels the subscription. If you subscribed through Google Play, cancel it in your Google
+Play account, because we cannot cancel it for you.</p>
 <p><strong>If you cannot open the app</strong> (for example you have uninstalled it), email
 <a href="mailto:support@hoardrapp.com?subject=Delete%20my%20account">support@hoardrapp.com</a> from the
 email address on your account and ask us to delete your account and data. We will verify the request
@@ -219,7 +249,7 @@ any question about your data, email <a href="mailto:privacy@hoardrapp.com">priva
 withdraw consent, and lodge a complaint with a regulator. We will not discriminate against you for
 exercising any privacy right.</p>
 
-<h2 id="regional">9. Regional rights</h2>
+<h2 id="regional">10. Regional rights</h2>
 <h3>Australia</h3>
 <p>We handle personal information in line with the Australian Privacy Principles under the Privacy
 Act 1988 (Cth). If you are unhappy with our response to a privacy complaint you may contact the
@@ -237,29 +267,30 @@ information</strong>, so there is nothing to opt out of. The categories we colle
 (email address), internet activity (security logs), and user content (your collection and
 photographs), as described in section 2.</p>
 
-<h2 id="retention">10. Retention</h2>
+<h2 id="retention">11. Retention</h2>
 <p>Your data is kept for as long as your account exists. When you delete your account it is removed
 from the live database and storage immediately. Residual copies may persist briefly in Google's
 routine backups before being overwritten. Support emails are kept while needed to resolve your
 enquiry.</p>
 
-<h2 id="security">11. Security and breach notification</h2>
-<p>Access is enforced by owner-only security rules on both the database and photo storage, traffic is
-encrypted in transit with HTTPS/TLS, and Firebase App Check is enforced to reject requests that do
-not come from the genuine app. Uploads are limited to images under 5 MB.</p>
+<h2 id="security">12. Security and breach notification</h2>
+<p>We keep security measures proportionate to the information we hold. In broad terms: access
+controls restrict each account's records and photographs to that account, traffic is encrypted in
+transit, requests that do not come from the genuine Hoardr app are rejected, and uploads are limited
+in type and size. We review these arrangements as the app changes.</p>
 <p>No system is perfectly secure. If a breach occurs that is likely to result in a risk to your
 rights and freedoms, we will notify affected users and the relevant regulator as required by law —
 including the Notifiable Data Breaches scheme in Australia and Articles 33–34 of the GDPR.</p>
 
-<h2 id="children">12. Children</h2>
+<h2 id="children">13. Children</h2>
 <p>Hoardr is not directed at children under 13 and we do not knowingly collect their personal
 information. If you believe a child has created an account, contact us and we will delete it.</p>
 
-<h2 id="changes">13. Changes to this policy</h2>
+<h2 id="changes">14. Changes to this policy</h2>
 <p>If this policy changes materially we will update the version and date at the top of this page and,
 where the change is significant, notify you in the app before it takes effect.</p>
 
-<h2 id="contact">14. Contact</h2>
+<h2 id="contact">15. Contact</h2>
 <p>
   Privacy and data requests: <a href="mailto:privacy@hoardrapp.com">privacy@hoardrapp.com</a><br>
   General support: <a href="mailto:support@hoardrapp.com">support@hoardrapp.com</a>
