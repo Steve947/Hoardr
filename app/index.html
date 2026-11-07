@@ -2476,8 +2476,143 @@ function _proComingSoon(){
   }
   openModal('upgradeModal');
 }
-function openUpgrade(){
-  if(IS_ANDROID_APP){ _proComingSoon(); return; }
+// ── Google Play billing (Android app only) ─────────────────────────
+// Play requires digital goods bought inside a Play app to go through Play
+// Billing. On Android we talk to the Digital Goods API; on the web none of
+// this runs and Stripe handles everything exactly as before.
+const PLAY_BILLING_METHOD='https://play.google.com/billing';
+const PLAY_SKUS={ monthly:'hoardr_pro_monthly', annual:'hoardr_pro_annual', topup:'hoardr_ai_credits_50' };
+const PRO_FEATURES=[
+    ['\u{1F4F8}','AI photo auto-cataloguing','Snap a photo \u2014 AI fills in the details'],
+    ['\u{1F4E5}','AI Smart Import','Bring a whole spreadsheet or list in, mapped automatically'],
+    ['\u{1F4B2}','AI value estimates + tracking','Real values from current and recent online sales, tracked over time'],
+    ['\u{1F4C8}','Monthly value reports','A push telling you what your collection is worth'],
+    ['\u26A1','50 AI actions / month','Plenty for regular cataloguing'],
+];
+let _dgSvc=null, _dgTried=false, _playDetails=null;
+async function playService(){
+  if(_dgTried) return _dgSvc;
+  _dgTried=true;
+  try{
+    if(typeof window.getDigitalGoodsService!=='function') return null;
+    _dgSvc=await window.getDigitalGoodsService(PLAY_BILLING_METHOD);
+  }catch(e){ _dgSvc=null; }
+  return _dgSvc;
+}
+async function _loadPlayDetails(){
+  if(_playDetails) return _playDetails;
+  const svc=await playService(); if(!svc) return null;
+  try{
+    const list=await svc.getDetails([PLAY_SKUS.monthly,PLAY_SKUS.annual,PLAY_SKUS.topup]);
+    const map={}; (list||[]).forEach(function(d){ map[d.itemId]=d; });
+    _playDetails={ monthly:map[PLAY_SKUS.monthly]||null, annual:map[PLAY_SKUS.annual]||null, topup:map[PLAY_SKUS.topup]||null };
+    return _playDetails;
+  }catch(e){ return null; }
+}
+// Play returns the real local price. Format it so it matches the Play Store
+// exactly rather than hardcoding Australian dollars for everyone.
+function _fmtPlayPrice(d){
+  try{
+    if(!d||!d.price) return '';
+    return new Intl.NumberFormat(navigator.language||'en-AU',{style:'currency',currency:d.price.currency}).format(parseFloat(d.price.value));
+  }catch(e){ return (d&&d.price)?(d.price.currency+' '+d.price.value):''; }
+}
+// The whole purchase round trip. Nothing counts as bought until our own
+// backend has verified and acknowledged the token with Google: Play auto
+// refunds anything left unacknowledged for three days.
+async function _playBuy(sku){
+  const svc=await playService();
+  if(!svc){ showToast('Google Play billing is not available here','\u26A0\uFE0F'); return false; }
+  if(!fnSvc){ showToast('Reload and try again','\u26A0\uFE0F'); return false; }
+  if(!currentUser){ showToast('Sign in first','\uD83D\uDD12'); return false; }
+  if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before subscribing','\uD83D\uDD12'); return false; }
+  let req;
+  try{
+    req=new PaymentRequest(
+      [{ supportedMethods:PLAY_BILLING_METHOD, data:{ sku:sku } }],
+      { total:{ label:'Total', amount:{ currency:'AUD', value:'0' } } }   // ignored; Play Console sets the real price
+    );
+  }catch(e){ showToast('Could not start the purchase','\u26A0\uFE0F'); return false; }
+  let res;
+  try{ res=await req.show(); }
+  catch(e){ if(e&&e.name==='AbortError') return false; showToast('The purchase did not complete','\u26A0\uFE0F'); return false; }
+  const token=res&&res.details&&res.details.purchaseToken;
+  try{
+    if(!token) throw new Error('no purchase token');
+    const r=await fnSvc.httpsCallable('verifyPlayPurchase')({ productId:sku, purchaseToken:token });
+    if(!(r&&r.data&&r.data.ok)) throw new Error('not confirmed');
+    try{ await res.complete('success'); }catch(_){}
+    showToast(sku===PLAY_SKUS.topup?'Credits added, thanks!':'Welcome to Hoardr Pro!','\u2728');
+    _refreshEntitlement(); setTimeout(_refreshEntitlement,3000);
+    return true;
+  }catch(e){
+    try{ await res.complete('fail'); }catch(_){}
+    showToast('We could not confirm that purchase. If you were charged, email support and we will fix it.','\u26A0\uFE0F');
+    return false;
+  }
+}
+// Catch anything Play says the user owns that we never confirmed, for example
+// a purchase that completed while the app was killed. The backend is
+// idempotent, so re-sending a token is harmless.
+async function _playRestore(){
+  try{
+    if(!IS_ANDROID_APP||!currentUser||!fnSvc) return;
+    const svc=await playService(); if(!svc) return;
+    const owned=await svc.listPurchases();
+    if(!owned||!owned.length) return;
+    for(const pch of owned){
+      try{ await fnSvc.httpsCallable('verifyPlayPurchase')({ productId:pch.itemId, purchaseToken:pch.purchaseToken }); }catch(e){}
+    }
+    _refreshEntitlement();
+  }catch(e){}
+}
+async function _playBuyPlan(plan){
+  const ok=await _playBuy(plan==='annual'?PLAY_SKUS.annual:PLAY_SKUS.monthly);
+  if(ok) closeModal('upgradeModal');
+}
+async function _playBuyTopup(){
+  const ok=await _playBuy(PLAY_SKUS.topup);
+  if(ok) closeModal('topupModal');
+}
+function _playManageUrl(sku){
+  return 'https://play.google.com/store/account/subscriptions?package=com.hoardrapp.android'+(sku?('&sku='+encodeURIComponent(sku)):'');
+}
+async function _renderUpgradePlay(){
+  const box=document.getElementById('upgradeBody'); if(!box) return;
+  box.innerHTML='<div style="text-align:center;padding:22px 0;color:var(--text3);font-size:13px">Loading plans from Google Play\u2026</div>';
+  const d=await _loadPlayDetails();
+  if(!d||(!d.monthly&&!d.annual)){ _proComingSoon(); return; }
+  _renderUpgradePlayBody();
+}
+function _renderUpgradePlayBody(){
+  const box=document.getElementById('upgradeBody'); if(!box) return;
+  const annual=_upgPlan==='annual';
+  const det=annual?(_playDetails&&_playDetails.annual):(_playDetails&&_playDetails.monthly);
+  if(!det){ _proComingSoon(); return; }
+  const price=_fmtPlayPrice(det);
+  const per=annual?'/year':'/month';
+  box.innerHTML =
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'
+     +'<button class="btn '+(annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'annual\')">Yearly \u00b7 best value</button>'
+     +'<button class="btn '+(!annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'monthly\')">Monthly</button>'
+    +'</div>'
+    +'<div style="text-align:center;margin-bottom:3px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">'+price+'<span style="font-size:13px;color:var(--text3)">'+per+'</span></span></div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">'+(annual?'Billed yearly. Switch to monthly anytime.':'Billed monthly. Switch to yearly anytime to save.')+'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:9px;margin-bottom:14px">'
+     +PRO_FEATURES.map(function(f){ return '<div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:16px">'+f[0]+'</span><span style="flex:1"><span style="font-size:13px;color:var(--text)">'+f[1]+'</span><br><span style="font-size:11px;color:var(--text3)">'+f[2]+'</span></span></div>'; }).join('')
+    +'</div>'
+    +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyPlan(\''+(annual?'annual':'monthly')+'\')">Subscribe</button>'
+    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">Billed through Google Play. Cancel anytime in your Google Play account.</p>';
+}
+async function openUpgrade(){
+  if(IS_ANDROID_APP){
+    const svc=await playService();
+    if(!svc){ _proComingSoon(); return; }
+    _upgPlan='annual';
+    openModal('upgradeModal');
+    _renderUpgradePlay();
+    return;
+  }
   _upgPlan='annual'; _renderUpgrade(); openModal('upgradeModal');
 }
 // ── User feedback ──
@@ -2503,19 +2638,13 @@ async function submitFeedbackForm(){
     else showToast('Could not send — '+((e&&e.message)||'please try again'),'⚠️');
   }finally{ if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
 }
-function setUpgPlan(p){ _upgPlan=p; _renderUpgrade(); }
+function setUpgPlan(p){ _upgPlan=p; if(IS_ANDROID_APP) _renderUpgradePlayBody(); else _renderUpgrade(); }
 function _renderUpgrade(){
   const box=document.getElementById('upgradeBody'); if(!box) return;
   const annual=_upgPlan==='annual';
   const price = annual ? 'A$49.99<span style="font-size:13px;color:var(--text3)">/year</span>' : 'A$6.99<span style="font-size:13px;color:var(--text3)">/month</span>';
   const sub = annual ? 'Just ~A$4.17/month, billed yearly — around 40% off monthly.' : 'Billed monthly. Switch to yearly anytime to save.';
-  const feats=[
-    ['📸','AI photo auto-cataloguing','Snap a photo — AI fills in the details'],
-    ['📥','AI Smart Import','Bring a whole spreadsheet or list in, mapped automatically'],
-    ['💲','AI value estimates + tracking','Real values from current and recent online sales, tracked over time'],
-    ['📈','Monthly value reports','A push telling you what your collection is worth'],
-    ['⚡','50 AI actions / month','Plenty for regular cataloguing'],
-  ];
+  const feats=PRO_FEATURES;
   box.innerHTML =
     '<div style="display:flex;gap:8px;margin-bottom:14px">'
      +'<button class="btn '+(annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'annual\')">Yearly · best value</button>'
@@ -2541,7 +2670,7 @@ async function startCheckout(plan){
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
 function openTopup(){
-  if(IS_ANDROID_APP){ _proComingSoon(); return; }
+  if(IS_ANDROID_APP){ _openTopupPlay(); return; }
   const box=document.getElementById('topupBody');
   if(box){
     box.innerHTML='<div style="text-align:center;margin-bottom:6px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">A$2.99</span></div>'
@@ -2552,8 +2681,22 @@ function openTopup(){
   }
   openModal('topupModal');
 }
+async function _openTopupPlay(){
+  const box=document.getElementById('topupBody');
+  if(box) box.innerHTML='<div style="text-align:center;padding:22px 0;color:var(--text3);font-size:13px">Loading from Google Play\u2026</div>';
+  openModal('topupModal');
+  const d=await _loadPlayDetails();
+  const det=d&&d.topup;
+  if(!box) return;
+  if(!det){ box.innerHTML='<div style="text-align:center;font-size:13px;color:var(--text3);padding:10px 0">Credit top-ups are not available in the app just yet.</div>'; return; }
+  box.innerHTML='<div style="text-align:center;margin-bottom:6px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">'+_fmtPlayPrice(det)+'</span></div>'
+    +'<div style="text-align:center;font-size:13px;color:var(--text);margin-bottom:4px">50 extra AI actions</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">A one-off top-up. These credits never expire and are used automatically once your monthly allowance runs out.</div>'
+    +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyTopup()">Buy 50 credits</button>'
+    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">One-off payment through Google Play.</p>';
+}
 async function startTopup(){
-  if(IS_ANDROID_APP){ _proComingSoon(); return; }
+  if(IS_ANDROID_APP){ _openTopupPlay(); return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before buying credits','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
@@ -2564,7 +2707,7 @@ async function startTopup(){
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('failed-precondition')>=0) showToast('Top-ups are for Pro subscribers','🔒'); else if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
 async function openBillingPortal(){
-  if(IS_ANDROID_APP){ showToast('Manage your subscription at hoardrapp.com','\u2139\ufe0f'); return; }
+  if(IS_ANDROID_APP){ try{ window.open(_playManageUrl(),'_blank','noopener'); }catch(e){ showToast('Manage your subscription in the Google Play app','\u2139\ufe0f'); } return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   showToast('Opening your billing portal…','💳');
   try{
@@ -2578,10 +2721,13 @@ function _renderProUI(){
   const _lim=_aiUsage.limit||(isProUser?50:5), _used=_aiUsage.used||0, _left=Math.max(0,_lim-_used);
   const _usageLine='<div style="font-size:11px;color:var(--text3);margin:6px 0 2px">AI actions this month: <strong style="color:var(--text2)">'+_used+' of '+_lim+'</strong> used'+(_left<=0?' (resets on the 1st)':'')+'</div>';
   if(IS_ANDROID_APP){
+    const _credits=(_aiCredits>0)?'<div style="font-size:11px;color:var(--gold2);margin:2px 0 0">Top-up credits: <strong>'+_aiCredits+'</strong> left (never expire)</div>':'';
     box.innerHTML=(isProUser
-        ? '<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">\u2713 You\'re on Hoardr Pro</div>'
-        : '<p style="font-size:12px;color:var(--text3);margin-bottom:2px">Pro features are coming to the Android app shortly.</p>')
-      +_usageLine;
+        ? '<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">\u2713 You\'re on Hoardr Pro</div>'+_usageLine+_credits
+          +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="closeModal(\'profileModal\');openTopup()">\uFF0B Buy AI credits</button>'
+          +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px" onclick="openBillingPortal()">Manage in Google Play</button>'
+        : '<p style="font-size:12px;color:var(--text3);margin-bottom:2px">Unlock more with Pro: AI cataloguing, value estimates and tracking, and monthly reports.</p>'+_usageLine
+          +'<button class="btn btn-gold" style="width:100%;justify-content:center;margin-top:8px" onclick="closeModal(\'profileModal\');openUpgrade()">Upgrade to Pro</button>');
     return;
   }
   if(isProUser){
@@ -2606,7 +2752,6 @@ let _upNudgeArmed=false;
 function armUpgradeNudge(){ if(_upNudgeArmed) return; _upNudgeArmed=true; setTimeout(maybeShowUpgradeNudge,6000); }
 function maybeShowUpgradeNudge(){
   try{
-    if(IS_ANDROID_APP) return;                            // Play build: no purchase prompts
     if(isProUser || !currentUser) return;                 // subscribers/owners: never
     if((db.items||[]).length < 3) return;                 // only nudge engaged users
     try{ if(!localStorage.getItem('hoardr_onboarded')) return; }catch(e){}
@@ -3159,6 +3304,7 @@ function setupAuthListener() {
       currentUser = user;
       isProUser = PRO_EMAILS.includes((user.email||'').toLowerCase()) || isGrantedProNow(user.email);
       _refreshEntitlement();   // also honour a billing-set isPro flag on the account doc (guarded)
+      _playRestore();          // Android: confirm anything Play says is owned but we never verified
       updateAiUi();
       document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
       document.title = 'Hoardr';
