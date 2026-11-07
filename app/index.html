@@ -2320,6 +2320,7 @@ async function _refreshEntitlement(){
     const was = isProUser;
     isProUser = pro || PRO_EMAILS.includes((currentUser.email||'').toLowerCase()) || isGrantedProNow(currentUser.email);
     _aiCredits = (d.exists && d.get('aiCredits')) || 0;
+    _billingSource = (d.exists && d.get('billingSource')) || '';
     if(isProUser!==was){ try{ updateAiUi(); }catch(e){} try{ render(); }catch(e){} }
     try{ _renderProUI(); }catch(e){}
     _refreshAiQuota();
@@ -2328,6 +2329,7 @@ async function _refreshEntitlement(){
 // ── AI monthly quota (free taste vs Pro). Server-enforced; this is display + upsell. ──
 let _aiUsage = { used: 0, limit: null };
 let _aiCredits = 0; // never-expiring top-up wallet (users/{uid}.aiCredits), Pro-purchased
+let _billingSource = ''; // 'play' or 'stripe' — decides which billing UI to show
 async function _refreshAiQuota(){
   try{
     if(!(firebaseMode && currentUser)) return;
@@ -2451,7 +2453,10 @@ let _upgPlan='annual';
 // for the session (sessionStorage, not localStorage, so it never leaks into
 // ordinary Chrome browsing on the same phone). The Digital Goods API is a
 // second signal that only exists in installed Android contexts.
-const IS_ANDROID_APP = (function(){
+// HARD signal: a TWA launch sets an android-app:// referrer. This is the only
+// thing that PROVES we are inside the app installed from Google Play, and it is
+// what forbids us from ever showing Stripe.
+const IS_ANDROID_APP_HARD = (function(){
   try{
     if((document.referrer||'').indexOf('android-app://com.hoardrapp.android')===0){
       try{ sessionStorage.setItem('hoardr_android_app','1'); }catch(_){}
@@ -2459,25 +2464,36 @@ const IS_ANDROID_APP = (function(){
     }
     if(sessionStorage.getItem('hoardr_android_app')==='1') return true;
   }catch(_){}
-  try{ if(typeof window.getDigitalGoodsService==='function') return true; }catch(_){}
   return false;
+})();
+// SOFT signal: the Digital Goods API also exists for a site installed to the
+// home screen from Chrome, where Play billing cannot work. So it means "try
+// Play first", not "this is the Play app". When Play does not answer and the
+// hard signal is absent, we fall back to Stripe, which is correct for a home
+// screen install and is the case that was previously left with no way to pay.
+const IS_ANDROID_APP = IS_ANDROID_APP_HARD || (function(){
+  try{ return typeof window.getDigitalGoodsService==='function'; }catch(_){ return false; }
 })();
 function _hideAndroidPurchaseUI(){
   try{ var b=document.getElementById('onbTrialBtn'); if(b) b.style.display='none'; }catch(_){}
 }
-if(IS_ANDROID_APP){
+if(IS_ANDROID_APP_HARD){
   _hideAndroidPurchaseUI();
   try{ document.addEventListener('DOMContentLoaded',_hideAndroidPurchaseUI); }catch(_){}
 }
-function _proComingSoon(){
+function _proComingSoon(msg){
   const box=document.getElementById('upgradeBody');
   if(box){
     box.innerHTML='<div style="text-align:center;margin-bottom:12px"><span style="font-size:32px">\u2728</span></div>'
-      +'<div style="text-align:center;font-size:14px;color:var(--text);margin-bottom:8px">Pro is coming to the Android app</div>'
-      +'<div style="text-align:center;font-size:12px;color:var(--text3);line-height:1.55">Everything you have catalogued is safe and stays yours. The Pro tools will be available in the app shortly.</div>';
+      +'<div style="text-align:center;font-size:14px;color:var(--text);margin-bottom:8px">'+(msg||'Pro is not available here just yet')+'</div>'
+      +'<div style="text-align:center;font-size:12px;color:var(--text3);line-height:1.55">Everything you have catalogued is safe and stays yours.</div>'
+      +'<button class="btn btn-outline" style="width:100%;justify-content:center;margin-top:14px" onclick="_retryUpgrade()">Try again</button>';
   }
   openModal('upgradeModal');
 }
+// Clear every cached lookup and start over, for the case where Play was
+// briefly unreachable.
+function _retryUpgrade(){ _dgSvc=null; _playDetails=null; openUpgrade(); }
 // ── Google Play billing (Android app only) ─────────────────────────
 // Play requires digital goods bought inside a Play app to go through Play
 // Billing. On Android we talk to the Digital Goods API; on the web none of
@@ -2491,11 +2507,11 @@ const PRO_FEATURES=[
     ['\u{1F4C8}','Monthly value reports','A push telling you what your collection is worth'],
     ['\u26A1','50 AI actions / month','Plenty for regular cataloguing'],
 ];
-let _dgSvc=null, _dgTried=false, _playDetails=null;
+let _dgSvc=null, _playDetails=null;
 async function playService(){
-  if(_dgTried) return _dgSvc;
-  _dgTried=true;
-  try{
+  if(_dgSvc) return _dgSvc;          // only a SUCCESSFUL lookup is cached; a
+  try{                                // failure must be retryable, otherwise one
+                                      // bad moment at sign-in breaks the session
     if(typeof window.getDigitalGoodsService!=='function') return null;
     _dgSvc=await window.getDigitalGoodsService(PLAY_BILLING_METHOD);
   }catch(e){ _dgSvc=null; }
@@ -2583,14 +2599,21 @@ async function _renderUpgradePlay(){
   const box=document.getElementById('upgradeBody'); if(!box) return;
   box.innerHTML='<div style="text-align:center;padding:22px 0;color:var(--text3);font-size:13px">Loading plans from Google Play\u2026</div>';
   const d=await _loadPlayDetails();
-  if(!d||(!d.monthly&&!d.annual)){ _proComingSoon(); return; }
+  if(!d||(!d.monthly&&!d.annual)){
+    // Outside the Play app, Stripe is the correct route when Play has nothing.
+    if(!IS_ANDROID_APP_HARD){ _renderUpgrade(); return; }
+    _proComingSoon('Could not reach Google Play'); return;
+  }
   _renderUpgradePlayBody();
 }
 function _renderUpgradePlayBody(){
   const box=document.getElementById('upgradeBody'); if(!box) return;
   const annual=_upgPlan==='annual';
   const det=annual?(_playDetails&&_playDetails.annual):(_playDetails&&_playDetails.monthly);
-  if(!det){ _proComingSoon(); return; }
+  if(!det){
+    if(!IS_ANDROID_APP_HARD){ _renderUpgrade(); return; }
+    _proComingSoon('Could not reach Google Play'); return;
+  }
   const price=_fmtPlayPrice(det);
   const per=annual?'/year':'/month';
   box.innerHTML =
@@ -2609,11 +2632,10 @@ function _renderUpgradePlayBody(){
 async function openUpgrade(){
   if(IS_ANDROID_APP){
     const svc=await playService();
-    if(!svc){ _proComingSoon(); return; }
-    _upgPlan='annual';
-    openModal('upgradeModal');
-    _renderUpgradePlay();
-    return;
+    if(svc){ _upgPlan='annual'; openModal('upgradeModal'); _renderUpgradePlay(); return; }
+    // Play did not answer. Inside the Play app that is an error; anywhere else
+    // (a home screen install) Stripe is the correct and permitted route.
+    if(IS_ANDROID_APP_HARD){ _proComingSoon('Could not reach Google Play'); return; }
   }
   _upgPlan='annual'; _renderUpgrade(); openModal('upgradeModal');
 }
@@ -2640,7 +2662,7 @@ async function submitFeedbackForm(){
     else showToast('Could not send — '+((e&&e.message)||'please try again'),'⚠️');
   }finally{ if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
 }
-function setUpgPlan(p){ _upgPlan=p; if(IS_ANDROID_APP) _renderUpgradePlayBody(); else _renderUpgrade(); }
+function setUpgPlan(p){ _upgPlan=p; if(_dgSvc) _renderUpgradePlayBody(); else _renderUpgrade(); }
 function _renderUpgrade(){
   const box=document.getElementById('upgradeBody'); if(!box) return;
   const annual=_upgPlan==='annual';
@@ -2661,7 +2683,7 @@ function _renderUpgrade(){
     +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">7 days free, then '+(annual?'A$49.99/year':'A$6.99/month')+'. Cancel anytime in your account. Billed in AUD via Stripe.</p>';
 }
 async function startCheckout(plan){
-  if(IS_ANDROID_APP){ _proComingSoon(); return; }
+  if(IS_ANDROID_APP_HARD){ _proComingSoon(); return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before subscribing','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
@@ -2671,8 +2693,12 @@ async function startCheckout(plan){
     if(url){ window.location.href=url; } else { showToast('Could not start checkout','⚠️'); }
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
-function openTopup(){
-  if(IS_ANDROID_APP){ _openTopupPlay(); return; }
+async function openTopup(){
+  if(IS_ANDROID_APP){
+    const svc=await playService();
+    if(svc){ _openTopupPlay(); return; }
+    if(IS_ANDROID_APP_HARD){ _proComingSoon('Could not reach Google Play'); return; }
+  }
   const box=document.getElementById('topupBody');
   if(box){
     box.innerHTML='<div style="text-align:center;margin-bottom:6px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">A$2.99</span></div>'
@@ -2698,7 +2724,7 @@ async function _openTopupPlay(){
     +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">One-off payment through Google Play.</p>';
 }
 async function startTopup(){
-  if(IS_ANDROID_APP){ _openTopupPlay(); return; }
+  if(IS_ANDROID_APP_HARD){ _openTopupPlay(); return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   if(!isVerified() && !(await verifyRecheck(true))){ renderVerifyBar(); showToast('Confirm your email address before buying credits','\ud83d\udd12'); return; }
   showToast('Opening secure checkout…','💳');
@@ -2709,7 +2735,7 @@ async function startTopup(){
   }catch(e){ const c=(e&&e.code)||''; if(c.indexOf('failed-precondition')>=0) showToast('Top-ups are for Pro subscribers','🔒'); else if(c.indexOf('unauthenticated')>=0) showToast('Sign in first','🔒'); else showToast('Checkout failed: '+((e&&e.message)||'try again'),'⚠️'); }
 }
 async function openBillingPortal(){
-  if(IS_ANDROID_APP){ try{ window.open(_playManageUrl(),'_blank','noopener'); }catch(e){ showToast('Manage your subscription in the Google Play app','\u2139\ufe0f'); } return; }
+  if(IS_ANDROID_APP_HARD || _billingSource==='play'){ try{ window.open(_playManageUrl(),'_blank','noopener'); }catch(e){ showToast('Manage your subscription in the Google Play app','\u2139\ufe0f'); } return; }
   if(!fnSvc){ showToast('Reload and try again','⚠️'); return; }
   showToast('Opening your billing portal…','💳');
   try{
@@ -2722,7 +2748,7 @@ function _renderProUI(){
   const box=document.getElementById('pfPro'); if(!box) return;
   const _lim=_aiUsage.limit||(isProUser?50:5), _used=_aiUsage.used||0, _left=Math.max(0,_lim-_used);
   const _usageLine='<div style="font-size:11px;color:var(--text3);margin:6px 0 2px">AI actions this month: <strong style="color:var(--text2)">'+_used+' of '+_lim+'</strong> used'+(_left<=0?' (resets on the 1st)':'')+'</div>';
-  if(IS_ANDROID_APP){
+  if(IS_ANDROID_APP_HARD || _billingSource==='play'){
     const _credits=(_aiCredits>0)?'<div style="font-size:11px;color:var(--gold2);margin:2px 0 0">Top-up credits: <strong>'+_aiCredits+'</strong> left (never expire)</div>':'';
     box.innerHTML=(isProUser
         ? '<div style="font-size:13px;color:var(--gold2);margin-bottom:2px">\u2713 You\'re on Hoardr Pro</div>'+_usageLine+_credits
