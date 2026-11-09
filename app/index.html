@@ -2747,7 +2747,9 @@ async function _openTopupPlay(){
 function _playDiag(){
   try{
     const em=((currentUser&&currentUser.email)||'').toLowerCase();
-    if(OWNER_PRO_EMAILS.map(function(e){return e.toLowerCase();}).indexOf(em)<0) return '';
+    const _diagOk=OWNER_PRO_EMAILS.concat(['gigantostudio@gmail.com'])
+      .map(function(e){return e.toLowerCase();}).indexOf(em)>=0;
+    if(!_diagOk) return '';
     return '<details style="margin-top:14px"><summary style="font-size:10px;color:var(--text3);cursor:pointer">Play details (owner only)</summary>'
       +'<pre style="white-space:pre-wrap;word-break:break-all;font-size:9px;color:var(--text3);background:var(--bg);padding:8px;border-radius:6px;margin-top:6px">'
       +(JSON.stringify(_playDetails,null,1)||'null').replace(/</g,'&lt;')
