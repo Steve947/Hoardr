@@ -2535,6 +2535,17 @@ function _fmtPlayPrice(d){
     return new Intl.NumberFormat(navigator.language||'en-AU',{style:'currency',currency:d.price.currency}).format(parseFloat(d.price.value));
   }catch(e){ return (d&&d.price)?(d.price.currency+' '+d.price.value):''; }
 }
+// Play reports a free trial on the backwards compatible offer as an ISO 8601
+// duration (P7D, P1W). If Play tells us there is one we say so; if it does not,
+// we promise nothing, so the panel can never advertise a trial that the user
+// turns out not to be eligible for.
+function _trialDays(d){
+  try{
+    var pr=d&&d.freeTrialPeriod; if(!pr) return 0;
+    var m=/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?/.exec(pr); if(!m) return 0;
+    return (parseInt(m[1]||0,10)*365)+(parseInt(m[2]||0,10)*30)+(parseInt(m[3]||0,10)*7)+parseInt(m[4]||0,10);
+  }catch(e){ return 0; }
+}
 // The whole purchase round trip. Nothing counts as bought until our own
 // backend has verified and acknowledged the token with Google: Play auto
 // refunds anything left unacknowledged for three days.
@@ -2616,6 +2627,11 @@ function _renderUpgradePlayBody(){
   }
   const price=_fmtPlayPrice(det);
   const per=annual?'/year':'/month';
+  const _td=_trialDays(det);
+  const _btn=_td>0?('Start '+_td+' day free trial'):'Subscribe';
+  const _note=_td>0
+    ? (_td+' days free, then '+price+per+'. Billed through Google Play. Cancel anytime in your Google Play account.')
+    : 'Billed through Google Play. Cancel anytime in your Google Play account.';
   box.innerHTML =
     '<div style="display:flex;gap:8px;margin-bottom:14px">'
      +'<button class="btn '+(annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'annual\')">Yearly \u00b7 best value</button>'
@@ -2626,8 +2642,8 @@ function _renderUpgradePlayBody(){
     +'<div style="display:flex;flex-direction:column;gap:9px;margin-bottom:14px">'
      +PRO_FEATURES.map(function(f){ return '<div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:16px">'+f[0]+'</span><span style="flex:1"><span style="font-size:13px;color:var(--text)">'+f[1]+'</span><br><span style="font-size:11px;color:var(--text3)">'+f[2]+'</span></span></div>'; }).join('')
     +'</div>'
-    +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyPlan(\''+(annual?'annual':'monthly')+'\')">Subscribe</button>'
-    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">Billed through Google Play. Cancel anytime in your Google Play account.</p>';
+    +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyPlan(\''+(annual?'annual':'monthly')+'\')">'+_btn+'</button>'
+    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">'+_note+'</p>';
 }
 async function openUpgrade(){
   if(IS_ANDROID_APP){
