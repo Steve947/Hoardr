@@ -5508,6 +5508,7 @@ async function exportInsuranceSchedule(scopeId){
     doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(130,125,115);
     doc.text(refNo+' · '+owner+' · '+dateStr,M,PH-8);
     doc.text('Page '+page,RIGHT,PH-8,{align:'right'});
+    doc.text('Indicative estimates only. Not a professional valuation.',M,PH-4.5);
   }
   function nextPage(){ footer(); doc.addPage(); page++; }
   function ensure(h){ if(y+h>PH-18){ nextPage(); y=20; return true; } return false; }
@@ -5553,6 +5554,20 @@ async function exportInsuranceSchedule(scopeId){
     doc.text(_unval.toLocaleString()+' of '+_items.length.toLocaleString()+' items have no estimated value recorded. They are shown as \u2014 rather than $0.00, and contribute nothing to the totals below.',M,by+bh+5.5);
     y=by+bh+13;
   }
+  // Basis of values. An insurer reads this document, and its styling (Owner /
+  // insured, Effective date of values) makes it look like a formal valuation.
+  // Say plainly on the COVER that it is not one, rather than burying it.
+  (function(){
+    const _txt='Basis of values: the amounts shown are estimates recorded by the owner. Where an estimate was produced by Hoardr\u2019s AI tools it is derived from recent online sales of comparable items and is indicative only. This schedule is not a professional valuation, has not been prepared by a qualified valuer, and should not be relied on as an independent appraisal. Values change over time and should be reviewed before being relied on.';
+    doc.setFontSize(6.8);doc.setFont('helvetica','normal');
+    const _lines=doc.splitTextToSize(_txt,RIGHT-M-8);
+    const _h=_lines.length*3.1+6;
+    doc.setFillColor(250,247,238);doc.setDrawColor(220,210,180);doc.setLineWidth(0.3);
+    doc.rect(M,y,RIGHT-M,_h,'FD');
+    doc.setTextColor(110,100,80);
+    doc.text(_lines,M+4,y+4.6);
+    y+=_h+8;
+  })();
   doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(35,30,20);
   doc.text('Summary by collection',M,y); y+=5;
   doc.setFillColor(238,232,214);doc.rect(M,y,RIGHT-M,7,'F');
