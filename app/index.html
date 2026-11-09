@@ -2643,8 +2643,7 @@ function _renderUpgradePlayBody(){
      +PRO_FEATURES.map(function(f){ return '<div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:16px">'+f[0]+'</span><span style="flex:1"><span style="font-size:13px;color:var(--text)">'+f[1]+'</span><br><span style="font-size:11px;color:var(--text3)">'+f[2]+'</span></span></div>'; }).join('')
     +'</div>'
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyPlan(\''+(annual?'annual':'monthly')+'\')">'+_btn+'</button>'
-    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">'+_note+'</p>'
-    +_playDiag();
+    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">'+_note+'</p>';
 }
 async function openUpgrade(){
   if(IS_ANDROID_APP){
@@ -2738,23 +2737,7 @@ async function _openTopupPlay(){
     +'<div style="text-align:center;font-size:13px;color:var(--text);margin-bottom:4px">50 extra AI actions</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">A one-off top-up. These credits never expire and are used automatically once your monthly allowance runs out.</div>'
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyTopup()">Buy 50 credits</button>'
-    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">One-off payment through Google Play.</p>'
-    +_playDiag();
-}
-// Owner only. Dumps exactly what the Digital Goods API handed back, so we can
-// tell "Play never sends freeTrialPeriod" apart from "this account is not
-// eligible for the trial". Invisible to everyone else.
-function _playDiag(){
-  try{
-    const em=((currentUser&&currentUser.email)||'').toLowerCase();
-    const _diagOk=OWNER_PRO_EMAILS.concat(['gigantostudio@gmail.com'])
-      .map(function(e){return e.toLowerCase();}).indexOf(em)>=0;
-    if(!_diagOk) return '';
-    return '<details style="margin-top:14px"><summary style="font-size:10px;color:var(--text3);cursor:pointer">Play details (owner only)</summary>'
-      +'<pre style="white-space:pre-wrap;word-break:break-all;font-size:9px;color:var(--text3);background:var(--bg);padding:8px;border-radius:6px;margin-top:6px">'
-      +(JSON.stringify(_playDetails,null,1)||'null').replace(/</g,'&lt;')
-      +'</pre></details>';
-  }catch(e){ return ''; }
+    +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">One-off payment through Google Play.</p>';
 }
 async function startTopup(){
   if(IS_ANDROID_APP_HARD){ _openTopupPlay(); return; }
