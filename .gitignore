@@ -27,6 +27,7 @@
 !/firebase-messaging-sw.js
 !/mining-catalog.json
 !/story/
+!/guides/
 !/media/
 !/.nojekyll
 !/.well-known/
