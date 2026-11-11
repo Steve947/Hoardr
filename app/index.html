@@ -689,15 +689,9 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
 
 <!-- Mobile More Menu -->
 <div id="mobileMoreMenu" style="display:none;position:fixed;bottom:64px;right:0;left:0;z-index:130;background:var(--surface);border-top:1px solid var(--border2);padding:12px;box-shadow:0 -4px 20px rgba(0,0,0,.5);max-height:72vh;overflow-y:auto">
-  <div class="mm-sec">Create</div>
-  <div class="mm-grid">
-    <button class="btn btn-outline" onclick="toggleMobileMenu();openCollectionModal()">＋ Collection</button>
-    <button class="btn btn-outline" onclick="toggleMobileMenu();openGroupModal()">＋ Group</button>
-    <button class="btn btn-outline" style="grid-column:1/-1" onclick="toggleMobileMenu();showCollectionSummary()">📊 Dashboard</button>
-  </div>
   <div class="mm-sec">Export</div>
   <div class="mm-grid">
-    <button class="btn btn-outline" onclick="toggleMobileMenu();exportExcel()">📊 Excel</button>
+    <button class="btn btn-outline" onclick="toggleMobileMenu();openExcelChooser()">📊 Excel</button>
     <button class="btn btn-outline" onclick="toggleMobileMenu();openPdfChooser()">📄 PDF</button>
   </div>
   <div id="importSecM" style="display:none">
@@ -848,7 +842,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
       <div class="io-menu">
         <button class="btn btn-outline btn-sm" onclick="ioMenuToggle(this)">📊 Export ▾</button>
         <div class="io-dd">
-          <button class="btn btn-outline btn-sm" onclick="ioMenuClose();exportExcel()">📊 Excel spreadsheet</button>
+          <button class="btn btn-outline btn-sm" onclick="ioMenuClose();openExcelChooser()">📊 Excel spreadsheet</button>
           <button class="btn btn-outline btn-sm" onclick="ioMenuClose();openPdfChooser()">📄 PDF — catalogue or insurance</button>
         </div>
       </div>
@@ -1229,6 +1223,23 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
     </button>
 
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('pdfChoiceModal')">Cancel</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="excelChoiceModal" onclick="closeIfBg(event,'excelChoiceModal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">Export a spreadsheet</div>
+    <p style="color:var(--text3);font-size:12px;margin:-8px 0 12px">An Excel workbook with a summary, a sheet per collection, every field and your photos.</p>
+    <label style="display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Collections to include</label>
+    <div id="xlScopeList" style="max-height:168px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:16px"></div>
+    <button class="pdf-choice" onclick="var _s=_xlScopeIds();closeModal('excelChoiceModal');exportExcel(_s)">
+      <span class="pdf-choice-ic">📊</span>
+      <span>
+        <b>Download Excel</b>
+        <small>Opens in Excel, Numbers or Google Sheets. Every item field plus a photo sheet. Your data stays yours.</small>
+      </span>
+    </button>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal('excelChoiceModal')">Cancel</button></div>
   </div>
 </div>
 
@@ -5284,11 +5295,19 @@ function compressForExcel(base64){
 
 function _xc(v){return (typeof v==='string'&&v.length>32767)?v.slice(0,32760)+'…':v;}
 function _aoa(rows){return XLSX.utils.aoa_to_sheet(rows.map(r=>r.map(_xc)));}
-async function exportExcel(){
-  if(!db.items.length && !db.collections.length){showToast('Nothing to export','⚠️');return;}
-  showToast('Building Excel — please wait…','⏳');
+async function exportExcel(scopeIds){
+  const _ids = Array.isArray(scopeIds) ? scopeIds.filter(Boolean) : [];
+  const _scoped = _ids.length>0;
+  const _cols = _scoped ? db.collections.filter(c=>_ids.indexOf(c.id)>=0) : db.collections;
+  const _colIds = new Set(_cols.map(c=>c.id));
+  const _groups = _scoped ? db.groups.filter(g=>_colIds.has(g.collectionId)) : db.groups;
+  const _grpIds = new Set(_groups.map(g=>g.id));
+  const _items = _scoped ? db.items.filter(i=>_grpIds.has(i.groupId)) : db.items;
+  if(!_items.length && !_cols.length){showToast('Nothing to export','⚠️');return;}
+  expProgShow('Excel spreadsheet','Preparing photos');
   await new Promise(r=>setTimeout(r,60));
-  await prefetchPhotos(db.items.flatMap(i=>(i.photos||[]).filter(Boolean)), 'Excel');
+  await prefetchPhotos(_items.flatMap(i=>(i.photos||[]).filter(Boolean)), 'Excel');
+  const _totPhotos=_items.reduce((a,i)=>a+(i.photos||[]).filter(Boolean).length,0); let _pdone=0;
 
   try{
   const wb=XLSX.utils.book_new();
@@ -5297,19 +5316,19 @@ async function exportExcel(){
   const summaryRows=[
     ['HOARDR — COLLECTION EXPORT','','','',''],
     ['Generated',new Date().toLocaleString(),'','',''],
-    ['Collections',db.collections.length,'','',''],
-    ['Groups',db.groups.length,'','',''],
-    ['Total Items',db.items.length,'','',''],
-    ['Total Pieces',db.items.reduce((a,i)=>a+qtyOf(i),0),'','',''],
+    ['Collections',_cols.length,'','',''],
+    ['Groups',_groups.length,'','',''],
+    ['Total Items',_items.length,'','',''],
+    ['Total Pieces',_items.reduce((a,i)=>a+qtyOf(i),0),'','',''],
     ['','','','','']
   ];
-  db.collections.forEach(col=>{
-    const cGroups=db.groups.filter(g=>g.collectionId===col.id);
-    const cItems=cGroups.reduce((a,g)=>a+db.items.filter(i=>i.groupId===g.id).length,0);
-    const cVal=cGroups.reduce((a,g)=>a+db.items.filter(i=>i.groupId===g.id).reduce((b,i)=>b+parseFloat(i.value||0),0),0);
+  _cols.forEach(col=>{
+    const cGroups=_groups.filter(g=>g.collectionId===col.id);
+    const cItems=cGroups.reduce((a,g)=>a+_items.filter(i=>i.groupId===g.id).length,0);
+    const cVal=cGroups.reduce((a,g)=>a+_items.filter(i=>i.groupId===g.id).reduce((b,i)=>b+parseFloat(i.value||0),0),0);
     summaryRows.push([''+(col.icon||'○')+' '+col.name,col.category||'General',cGroups.length+' group(s)',cItems+' item(s)',cVal>0?fmtMoney(cVal):'']);
     cGroups.forEach(g=>{
-      const gi=db.items.filter(i=>i.groupId===g.id);
+      const gi=_items.filter(i=>i.groupId===g.id);
       const gv=gi.reduce((a,i)=>a+parseFloat(i.value||0),0);
       summaryRows.push(['   └─ '+(g.icon||'')+(g.icon?' ':'')+g.name,'','',gi.length+' item(s)',gv>0?fmtMoney(gv):'']);
     });
@@ -5325,9 +5344,9 @@ async function exportExcel(){
     'Seller','Provenance','Cert/Ref #','Short Description','Notes','History',
     'Tags','Rating','Insurance','Photos'];
 
-  for(const col of db.collections){
-    const cGroups=db.groups.filter(g=>g.collectionId===col.id);
-    const cItems=cGroups.reduce((a,g)=>a+db.items.filter(i=>i.groupId===g.id).length,0);
+  for(const col of _cols){
+    const cGroups=_groups.filter(g=>g.collectionId===col.id);
+    const cItems=cGroups.reduce((a,g)=>a+_items.filter(i=>i.groupId===g.id).length,0);
     if(!cGroups.length&&!cItems) continue;
 
     const sheetRows=[];
@@ -5339,8 +5358,8 @@ async function exportExcel(){
 
     let seq=0;
     cGroups.forEach(grp=>{
-      { const _gi=db.items.filter(i=>i.groupId===grp.id); const _gp=_gi.reduce((a,i)=>a+qtyOf(i),0); sheetRows.push(['── GROUP: '+(grp.icon?grp.icon+' ':'')+grp.name+' ── ('+_gi.length+' items'+(_gp>_gi.length?' · '+_gp+' pieces':'')+')']); }
-      db.items.filter(i=>i.groupId===grp.id).forEach(item=>{
+      { const _gi=_items.filter(i=>i.groupId===grp.id); const _gp=_gi.reduce((a,i)=>a+qtyOf(i),0); sheetRows.push(['── GROUP: '+(grp.icon?grp.icon+' ':'')+grp.name+' ── ('+_gi.length+' items'+(_gp>_gi.length?' · '+_gp+' pieces':'')+')']); }
+      _items.filter(i=>i.groupId===grp.id).forEach(item=>{
         seq++;
         const photoCount=(item.photos||[]).filter(p=>p).length;
         sheetRows.push([
@@ -5373,9 +5392,9 @@ async function exportExcel(){
     'Provenance','Cert/Ref #','Short Description','Notes','History','Tags','Rating','Insurance','Photos'];
   const allRows=[allHdr];
   let seq2=0;
-  db.collections.forEach(col=>{
-    db.groups.filter(g=>g.collectionId===col.id).forEach(grp=>{
-      db.items.filter(i=>i.groupId===grp.id).forEach(item=>{
+  _cols.forEach(col=>{
+    _groups.filter(g=>g.collectionId===col.id).forEach(grp=>{
+      _items.filter(i=>i.groupId===grp.id).forEach(item=>{
         seq2++;
         const pc=(item.photos||[]).filter(p=>p).length;
         allRows.push([seq2,col.name,grp.name,item.name||'',qtyOf(item),item.category||'',
@@ -5402,11 +5421,12 @@ async function exportExcel(){
   let hasPhotos=false;
   const photoHdr=['Collection','Group','Item Name','Photo #','How to View','Photo Data (for re-import)'];
   const photoRows=[photoHdr];
-  for(const col of db.collections){
-    for(const grp of db.groups.filter(g=>g.collectionId===col.id)){
-      for(const item of db.items.filter(i=>i.groupId===grp.id)){
+  for(const col of _cols){
+    for(const grp of _groups.filter(g=>g.collectionId===col.id)){
+      for(const item of _items.filter(i=>i.groupId===grp.id)){
         const photos=(item.photos||[]).filter(p=>p);
         for(let pi=0;pi<photos.length;pi++){
+          expProgSet(++_pdone,_totPhotos,'Embedding photos');
           const c=(await compressForExcel(await photoToDataUrl(photos[pi])))||'';
           if(!c) continue;
           hasPhotos=true;
@@ -5424,8 +5444,9 @@ async function exportExcel(){
   }
 
   XLSX.writeFile(wb,'hoardr_export.xlsx');
-  showToast('Excel exported'+(hasPhotos?' — photos on Photos sheet':''),'📊');
-  }catch(err){ console.error('Excel export failed',err); showToast('Excel export failed — '+((err&&err.message)||err),'⚠️'); }
+  expProgHide();
+  showToast('Excel exported'+(hasPhotos?', photos on Photos sheet':''),'📊');
+  }catch(err){ expProgHide(); console.error('Excel export failed',err); showToast('Excel export failed: '+((err&&err.message)||err),'⚠️'); }
 }
 
 
@@ -6731,6 +6752,39 @@ async function restoreItem(item){
 }
 // PDF export scope. An empty list means everything, which is also what the
 // two exports treat as unscoped, so a full export behaves exactly as it did.
+function _xlScopeIds(){
+  const all=document.getElementById('xlScopeAll');
+  if(all && all.checked) return [];
+  return Array.from(document.querySelectorAll('.xlScopeCb')).filter(function(x){ return x.checked; }).map(function(x){ return x.value; });
+}
+function _xlScopeAll(cb){
+  if(cb && cb.checked) document.querySelectorAll('.xlScopeCb').forEach(function(x){ x.checked=false; });
+}
+function _xlScopeSync(){
+  const any=Array.from(document.querySelectorAll('.xlScopeCb')).some(function(x){ return x.checked; });
+  const all=document.getElementById('xlScopeAll');
+  if(all) all.checked=!any;
+}
+function openExcelChooser(){
+  const box=document.getElementById('xlScopeList');
+  if(box){
+    const cur=(typeof selectedCollectionId!=='undefined'&&selectedCollectionId)?selectedCollectionId:'';
+    const counts={};
+    db.items.forEach(function(i){ const g=db.groups.find(x=>x.id===i.groupId); if(g) counts[g.collectionId]=(counts[g.collectionId]||0)+1; });
+    const row=function(id,label,checked){
+      return '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);padding:3px 0">'
+           + '<input type="checkbox" class="xlScopeCb" value="'+escH(id)+'"'+(checked?' checked':'')+' onchange="_xlScopeSync()"> '+label+'</label>';
+    };
+    let html='<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);font-weight:600;padding:3px 0;border-bottom:1px solid var(--line);margin-bottom:4px">'
+           + '<input type="checkbox" id="xlScopeAll"'+(cur?'':' checked')+' onchange="_xlScopeAll(this)"> All collections ('+db.items.length+' items)</label>';
+    db.collections.forEach(function(c){
+      const n=counts[c.id]||0;
+      html+=row(c.id, escH(c.name)+' <span style="color:var(--text3)">('+n+' item'+(n!==1?'s':'')+')</span>', c.id===cur);
+    });
+    box.innerHTML=html;
+  }
+  openModal('excelChoiceModal');
+}
 function _pdfScopeAll(cb){
   if(cb && cb.checked) document.querySelectorAll('.pdfScopeCb').forEach(function(x){ x.checked=false; });
 }
