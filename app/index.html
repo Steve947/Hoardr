@@ -2076,10 +2076,26 @@ function _siItemsResult(r,fname){
   _smartImport={ kind:'items', fname, category:(r.category&&CAT_FIELDS[r.category])?r.category:'', items };
   _renderSmartImport();
 }
+// Pick the sheet with the most actual data, not blindly the first one.
+// Templates and real workbooks often lead with a cover, read-me or summary
+// tab; the data grid is what we want to import.
+function _siPickSheet(wb){
+  let best=null, bestScore=-1;
+  (wb.SheetNames||[]).forEach(function(n){
+    const sh=wb.Sheets[n]; if(!sh) return;
+    let rows;
+    try{ rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:''}).filter(function(r){ return r.some(function(v){ return String(v).trim(); }); }); }catch(e){ return; }
+    const cols=rows.reduce(function(m,r){ return Math.max(m,r.length); },0);
+    const dataRows=Math.max(0,rows.length-1);
+    const score=dataRows*cols;
+    if(score>bestScore){ bestScore=score; best=sh; }
+  });
+  return best || wb.Sheets[wb.SheetNames[0]];
+}
 function _siFromSpreadsheet(buf,fname){
   showToast('AI mapping columns…','✨');
   try{
-    const wb=XLSX.read(buf,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
+    const wb=XLSX.read(buf,{type:'array'}); const ws=_siPickSheet(wb);
     const rows=XLSX.utils.sheet_to_json(ws,{defval:''}).filter(r=>Object.values(r).some(v=>String(v).trim()));
     if(!rows.length){ _siShowErr('No rows found in that sheet'); return; }
     const headers=Object.keys(rows[0]);
@@ -4613,6 +4629,12 @@ const DC_SCALES = ["1:8", "1:12", "1:16", "1:18", "1:20", "1:24", "1:25", "1:30"
 const DC_PACKAGING = ['Mint in Box (MIB)','Box opened','Box damaged / worn','Sealed on card','Card opened','No box / loose'];
 const DC_LOCATIONS = ['Aust','USA','UK','Canada','China','Hong Kong','Germany','Spain','Malaysia','New Zealand','Other'];
 
+const COIN_GRADES = ['Poor','Fair','Good','Very Good','Fine','Very Fine','Extremely Fine','About Uncirculated','Uncirculated','Proof'];
+const NOTE_GRADES = ['Poor','Good','Very Good','Fine','Very Fine','Extremely Fine','About Uncirculated','Uncirculated'];
+const CARD_GRADERS = ['PSA','BGS','CGC','SGC','Raw / Ungraded'];
+const VINYL_FORMATS = ['LP (12")','12" Single','7" Single','10"','EP','Box Set','Other'];
+const VINYL_GRADES = ['Mint (M)','Near Mint (NM)','Excellent (EX)','Very Good Plus (VG+)','Very Good (VG)','Good (G)','Poor (P)'];
+const RETRO_PLATFORMS = ['Nintendo (NES)','Super Nintendo (SNES)','Nintendo 64','GameCube','Wii','Game Boy','Game Boy Advance','Nintendo DS','Sega Master System','Sega Mega Drive / Genesis','Sega Saturn','Sega Dreamcast','Sega Game Gear','PlayStation (PS1)','PlayStation 2','PlayStation 3','PSP','Xbox','Xbox 360','Atari 2600','Commodore 64','Amiga','Arcade','PC','Other'];
 const CAT_FIELDS = {
   'Stickers':[
     {key:'stk_album_no',label:'Album Number',placeholder:'e.g. 3'},
@@ -4673,7 +4695,239 @@ const CAT_FIELDS = {
     {key:'train_colour',label:'Livery Colour',placeholder:'e.g. Green',type:'multiselect',opts:TRAIN_COLOURS},
     {key:'train_year',label:'Year / Era',placeholder:'e.g. 1989-91'},
     {key:'train_box',label:'Original Box',placeholder:'Y / N',type:'select',opts:['Y','N']},
-  ]
+  ],
+  'Toby Jug':[
+    {key:'tj_maker',label:'Maker / Pottery',placeholder:'e.g. Royal Doulton, Kevin Francis'},
+    {key:'tj_character',label:'Character / Subject',placeholder:'e.g. Winston Churchill'},
+    {key:'tj_size',label:'Size',placeholder:'e.g. Large',type:'select',opts:['Large','Small','Miniature','Tiny']},
+    {key:'tj_model_no',label:'Model Number',placeholder:'e.g. D6170'},
+    {key:'tj_year',label:'Year / Backstamp Period',placeholder:'e.g. 1940s'},
+    {key:'tj_condition',label:'Condition Notes',placeholder:'e.g. hairline to handle'},
+  ],
+  'Trading Cards':[
+    {key:'tc_game',label:'Game / Set',placeholder:'e.g. Magic The Gathering, NBA Hoops'},
+    {key:'tc_name',label:'Card Name',placeholder:'e.g. Black Lotus'},
+    {key:'tc_number',label:'Card Number',placeholder:'e.g. 045/102'},
+    {key:'tc_rarity',label:'Rarity',placeholder:'e.g. Rare, Holo, Short Print'},
+    {key:'tc_year',label:'Year',placeholder:'e.g. 1999'},
+    {key:'tc_grader',label:'Grading Company',placeholder:'e.g. PSA',type:'select',opts:CARD_GRADERS},
+    {key:'tc_grade',label:'Grade',placeholder:'e.g. 9, Gem Mint 10'},
+  ],
+  'Coins':[
+    {key:'coin_country',label:'Country',placeholder:'e.g. Australia'},
+    {key:'coin_year',label:'Year',placeholder:'e.g. 1930'},
+    {key:'coin_denom',label:'Denomination',placeholder:'e.g. Penny, 50c'},
+    {key:'coin_mint',label:'Mint Mark',placeholder:'e.g. S, D, no mark'},
+    {key:'coin_grade',label:'Grade',placeholder:'e.g. Very Fine',type:'select',opts:COIN_GRADES},
+    {key:'coin_metal',label:'Composition / Metal',placeholder:'e.g. Silver .925, Bronze'},
+    {key:'coin_cat',label:'Catalogue Reference',placeholder:'e.g. KM 27, Renniks'},
+  ],
+  'Banknotes':[
+    {key:'note_country',label:'Country',placeholder:'e.g. Australia'},
+    {key:'note_series',label:'Year / Series',placeholder:'e.g. 1953, Coombs Wilson'},
+    {key:'note_denom',label:'Denomination',placeholder:'e.g. One Pound, $10'},
+    {key:'note_serial',label:'Serial Number / Prefix',placeholder:'e.g. AA 000123'},
+    {key:'note_grade',label:'Grade',placeholder:'e.g. Fine',type:'select',opts:NOTE_GRADES},
+    {key:'note_cat',label:'Catalogue Reference',placeholder:'e.g. Pick R34, McDonald'},
+  ],
+  'Comics':[
+    {key:'cmc_title',label:'Title',placeholder:'e.g. The Amazing Spiderman'},
+    {key:'cmc_issue',label:'Issue Number',placeholder:'e.g. 300'},
+    {key:'cmc_publisher',label:'Publisher',placeholder:'e.g. Marvel, DC'},
+    {key:'cmc_year',label:'Year',placeholder:'e.g. 1988'},
+    {key:'cmc_variant',label:'Variant / Printing',placeholder:'e.g. 1st print, Newsstand'},
+    {key:'cmc_grader',label:'Grading',placeholder:'e.g. CGC',type:'select',opts:['CGC','CBCS','Raw / Ungraded']},
+    {key:'cmc_grade',label:'Grade',placeholder:'e.g. 9.6, VF/NM'},
+    {key:'cmc_key',label:'Key / Significance',placeholder:'e.g. 1st Venom'},
+  ],
+  'Vinyl Records':[
+    {key:'vnl_artist',label:'Artist',placeholder:'e.g. Fleetwood Mac'},
+    {key:'vnl_title',label:'Title',placeholder:'e.g. Rumours'},
+    {key:'vnl_label',label:'Label',placeholder:'e.g. Warner Bros'},
+    {key:'vnl_cat',label:'Catalogue Number',placeholder:'e.g. BSK 3010'},
+    {key:'vnl_year',label:'Year / Pressing',placeholder:'e.g. 1977 AU'},
+    {key:'vnl_format',label:'Format',placeholder:'e.g. LP (12 inch)',type:'select',opts:VINYL_FORMATS},
+    {key:'vnl_media',label:'Media Grade',placeholder:'e.g. Near Mint (NM)',type:'select',opts:VINYL_GRADES},
+    {key:'vnl_sleeve',label:'Sleeve Grade',placeholder:'e.g. Very Good Plus (VG+)',type:'select',opts:VINYL_GRADES},
+  ],
+  'Action Figures':[
+    {key:'af_line',label:'Line / Brand',placeholder:'e.g. Star Wars, Marvel Legends'},
+    {key:'af_character',label:'Character',placeholder:'e.g. Boba Fett'},
+    {key:'af_series',label:'Series / Wave',placeholder:'e.g. Vintage Collection'},
+    {key:'af_scale',label:'Scale / Size',placeholder:'e.g. 3.75 inch, 1:12'},
+    {key:'af_year',label:'Year',placeholder:'e.g. 1995'},
+    {key:'af_pkg',label:'Packaging',placeholder:'e.g. Mint on Card',type:'select',opts:['Mint on Card (MOC)','Mint in Box (MIB)','Loose Complete','Loose / Opened']},
+    {key:'af_condition',label:'Condition Notes',placeholder:'e.g. card crease, all accessories'},
+  ],
+  'Watches':[
+    {key:'wch_brand',label:'Brand',placeholder:'e.g. Seiko, Omega'},
+    {key:'wch_model',label:'Model',placeholder:'e.g. Speedmaster'},
+    {key:'wch_ref',label:'Reference Number',placeholder:'e.g. 311.30.42'},
+    {key:'wch_movement',label:'Movement',placeholder:'e.g. Automatic',type:'select',opts:['Automatic','Manual','Quartz','Solar','Other']},
+    {key:'wch_case',label:'Case Size',placeholder:'e.g. 40mm'},
+    {key:'wch_year',label:'Year',placeholder:'e.g. 1998'},
+    {key:'wch_serial',label:'Serial Number',placeholder:'e.g. 1234567'},
+    {key:'wch_box',label:'Box & Papers',placeholder:'e.g. Full Set',type:'select',opts:['Full Set','Watch Only','Box Only','Papers Only']},
+  ],
+  'Militaria & Medals':[
+    {key:'mil_nation',label:'Nation / Country',placeholder:'e.g. Australia, Germany'},
+    {key:'mil_conflict',label:'Conflict / Era',placeholder:'e.g. WWII, Boer War'},
+    {key:'mil_type',label:'Item Type',placeholder:'e.g. Medal, Cap Badge, Bayonet'},
+    {key:'mil_recipient',label:'Named / Recipient',placeholder:'e.g. 2451 Pte J Smith'},
+    {key:'mil_year',label:'Year / Date',placeholder:'e.g. 1916'},
+    {key:'mil_maker',label:'Maker / Hallmark',placeholder:'e.g. Stokes'},
+    {key:'mil_condition',label:'Condition Notes',placeholder:'e.g. ribbon faded'},
+  ],
+  'Art Prints':[
+    {key:'art_artist',label:'Artist',placeholder:'e.g. Pro Hart'},
+    {key:'art_title',label:'Title',placeholder:'e.g. Sunflowers'},
+    {key:'art_technique',label:'Technique',placeholder:'e.g. Lithograph, Giclee, Screenprint'},
+    {key:'art_edition',label:'Edition Number',placeholder:'e.g. 12/150'},
+    {key:'art_year',label:'Year',placeholder:'e.g. 2015'},
+    {key:'art_signed',label:'Signed',placeholder:'Y / N',type:'select',opts:['Y','N']},
+    {key:'art_size',label:'Dimensions',placeholder:'e.g. 50 x 70 cm'},
+  ],
+  'Autographs':[
+    {key:'ag_signer',label:'Signer',placeholder:'e.g. David Bowie'},
+    {key:'ag_field',label:'Field / Fame',placeholder:'e.g. Actor, Musician, Athlete'},
+    {key:'ag_item',label:'Item Type',placeholder:'e.g. Photo, Card, Ball, Letter'},
+    {key:'ag_auth',label:'Authentication',placeholder:'e.g. PSA/DNA, JSA, COA'},
+    {key:'ag_inscription',label:'Inscription',placeholder:'e.g. To Steve, best wishes'},
+    {key:'ag_year',label:'Date Signed / Obtained',placeholder:'e.g. 2003'},
+  ],
+  'Board Games':[
+    {key:'bg_title',label:'Title',placeholder:'e.g. Catan'},
+    {key:'bg_publisher',label:'Publisher',placeholder:'e.g. Ravensburger'},
+    {key:'bg_year',label:'Year / Edition',placeholder:'e.g. 1995 1st Ed'},
+    {key:'bg_players',label:'Players',placeholder:'e.g. 2 to 4'},
+    {key:'bg_complete',label:'Completeness',placeholder:'e.g. Complete',type:'select',opts:['Sealed / New','Complete','Missing Pieces','Incomplete']},
+    {key:'bg_condition',label:'Condition Notes',placeholder:'e.g. box wear'},
+  ],
+  'Bottle Caps':[
+    {key:'bc_brand',label:'Brand / Brewery',placeholder:'e.g. VB, Carlton Draught'},
+    {key:'bc_country',label:'Country',placeholder:'e.g. Australia'},
+    {key:'bc_type',label:'Type',placeholder:'e.g. Crown',type:'select',opts:['Crown','Twist','Other']},
+    {key:'bc_design',label:'Design / Series',placeholder:'e.g. World Cup promo'},
+    {key:'bc_year',label:'Year / Era',placeholder:'e.g. 1970s'},
+    {key:'bc_condition',label:'Condition Notes',placeholder:'e.g. light rust'},
+  ],
+  'Building Bricks':[
+    {key:'bb_brand',label:'Brand',placeholder:'e.g. LEGO, Mega Bloks'},
+    {key:'bb_set_name',label:'Set Name',placeholder:'e.g. Millennium Falcon'},
+    {key:'bb_set_no',label:'Set Number',placeholder:'e.g. 75192'},
+    {key:'bb_theme',label:'Theme',placeholder:'e.g. Star Wars, Technic'},
+    {key:'bb_pieces',label:'Piece Count',placeholder:'e.g. 7541'},
+    {key:'bb_year',label:'Year',placeholder:'e.g. 2017'},
+    {key:'bb_complete',label:'Completeness',placeholder:'e.g. Complete',type:'select',opts:['Sealed / New','Complete','Incomplete']},
+    {key:'bb_minifigs',label:'Minifigure Count',placeholder:'e.g. 4'},
+  ],
+  'Cassettes':[
+    {key:'cas_artist',label:'Artist',placeholder:'e.g. Madonna'},
+    {key:'cas_title',label:'Title',placeholder:'e.g. True Blue'},
+    {key:'cas_label',label:'Label',placeholder:'e.g. Sire'},
+    {key:'cas_cat',label:'Catalogue Number',placeholder:'e.g. 925 442'},
+    {key:'cas_year',label:'Year',placeholder:'e.g. 1986'},
+    {key:'cas_type',label:'Type',placeholder:'e.g. Album',type:'select',opts:['Album','Single','EP','Mixtape','Blank','Other']},
+    {key:'cas_condition',label:'Condition Notes',placeholder:'e.g. case cracked'},
+  ],
+  'Fountain Pens':[
+    {key:'fp_brand',label:'Brand',placeholder:'e.g. Parker, Montblanc'},
+    {key:'fp_model',label:'Model',placeholder:'e.g. 51, Meisterstuck 149'},
+    {key:'fp_nib_size',label:'Nib Size',placeholder:'e.g. Fine, Medium, Broad'},
+    {key:'fp_nib_material',label:'Nib Material',placeholder:'e.g. Gold',type:'select',opts:['Gold','Steel','Titanium','Other']},
+    {key:'fp_filler',label:'Filling System',placeholder:'e.g. Piston, Cartridge, Aerometric'},
+    {key:'fp_year',label:'Year / Era',placeholder:'e.g. 1950s'},
+    {key:'fp_colour',label:'Colour / Finish',placeholder:'e.g. Burgundy, Black'},
+  ],
+  'Keychains':[
+    {key:'kc_theme',label:'Theme / Subject',placeholder:'e.g. Formula 1, Disney'},
+    {key:'kc_brand',label:'Brand / Issuer',placeholder:'e.g. Shell, Ferrari'},
+    {key:'kc_material',label:'Material',placeholder:'e.g. Metal, Enamel, Rubber'},
+    {key:'kc_origin',label:'Origin / Place',placeholder:'e.g. Paris souvenir'},
+    {key:'kc_year',label:'Year / Era',placeholder:'e.g. 1990s'},
+    {key:'kc_condition',label:'Condition Notes',placeholder:'e.g. enamel chipped'},
+  ],
+  'Minerals & Crystals':[
+    {key:'min_species',label:'Species / Mineral',placeholder:'e.g. Amethyst, Pyrite'},
+    {key:'min_locality',label:'Locality / Origin',placeholder:'e.g. Broken Hill, NSW'},
+    {key:'min_size',label:'Size / Dimensions',placeholder:'e.g. 60 x 40 mm'},
+    {key:'min_weight',label:'Weight',placeholder:'e.g. 220 g'},
+    {key:'min_colour',label:'Colour',placeholder:'e.g. Deep purple'},
+    {key:'min_form',label:'Crystal Form / Habit',placeholder:'e.g. Cluster, Geode, Point'},
+    {key:'min_fluor',label:'Fluorescence',placeholder:'e.g. None',type:'select',opts:['None','Short Wave','Long Wave','Both']},
+  ],
+  'Movie Memorabilia':[
+    {key:'mov_title',label:'Title / Franchise',placeholder:'e.g. Star Wars'},
+    {key:'mov_item',label:'Item Type',placeholder:'e.g. Poster, Prop, Still, Figure'},
+    {key:'mov_year',label:'Year',placeholder:'e.g. 1977'},
+    {key:'mov_format',label:'Format / Size',placeholder:'e.g. One Sheet 27 x 41 in'},
+    {key:'mov_signed',label:'Signed',placeholder:'Y / N',type:'select',opts:['Y','N']},
+    {key:'mov_auth',label:'Authentication',placeholder:'e.g. COA, Studio'},
+    {key:'mov_condition',label:'Condition Notes',placeholder:'e.g. pin holes, fold wear'},
+  ],
+  'Pin Badges':[
+    {key:'pin_theme',label:'Theme / Series',placeholder:'e.g. Olympics, Hard Rock Cafe'},
+    {key:'pin_issuer',label:'Issuer / Brand',placeholder:'e.g. Qantas'},
+    {key:'pin_type',label:'Type',placeholder:'e.g. Enamel',type:'select',opts:['Enamel','Button / Pinback','Lapel','Other']},
+    {key:'pin_year',label:'Year / Era',placeholder:'e.g. 1984'},
+    {key:'pin_origin',label:'Origin / Event',placeholder:'e.g. LA 1984'},
+    {key:'pin_condition',label:'Condition Notes',placeholder:'e.g. minor scratches'},
+  ],
+  'Pocket Knives':[
+    {key:'pk_brand',label:'Brand',placeholder:'e.g. Case, Victorinox'},
+    {key:'pk_pattern',label:'Pattern / Model',placeholder:'e.g. Trapper, Soldier'},
+    {key:'pk_blades',label:'Blade Count',placeholder:'e.g. 2'},
+    {key:'pk_steel',label:'Blade Steel',placeholder:'e.g. Stainless, Carbon'},
+    {key:'pk_handle',label:'Handle Material',placeholder:'e.g. Bone, Stag, Alox'},
+    {key:'pk_year',label:'Year / Era',placeholder:'e.g. 1970s'},
+    {key:'pk_condition',label:'Condition Notes',placeholder:'e.g. blade snap strong'},
+  ],
+  'Pokémon Cards':[
+    {key:'pkm_set',label:'Set',placeholder:'e.g. Base Set, Evolving Skies'},
+    {key:'pkm_name',label:'Card Name',placeholder:'e.g. Charizard'},
+    {key:'pkm_number',label:'Card Number',placeholder:'e.g. 4/102'},
+    {key:'pkm_rarity',label:'Rarity',placeholder:'e.g. Holo Rare, Secret Rare'},
+    {key:'pkm_variant',label:'Variant',placeholder:'e.g. Holo',type:'select',opts:['Regular','Holo','Reverse Holo','1st Edition','Shadowless','Promo']},
+    {key:'pkm_grader',label:'Grading Company',placeholder:'e.g. PSA',type:'select',opts:CARD_GRADERS},
+    {key:'pkm_grade',label:'Grade',placeholder:'e.g. 10, Gem Mint'},
+  ],
+  'Retro Games':[
+    {key:'rg_platform',label:'Platform',placeholder:'e.g. Super Nintendo (SNES)',type:'select',opts:RETRO_PLATFORMS},
+    {key:'rg_title',label:'Title',placeholder:'e.g. Super Mario Bros 3'},
+    {key:'rg_region',label:'Region',placeholder:'e.g. PAL',type:'select',opts:['PAL','NTSC (US)','NTSC (JP)','Region Free']},
+    {key:'rg_year',label:'Year',placeholder:'e.g. 1990'},
+    {key:'rg_complete',label:'Completeness',placeholder:'e.g. Complete in Box',type:'select',opts:['Complete in Box (CIB)','Boxed, no manual','Cart / Disc only','Sealed / New']},
+    {key:'rg_condition',label:'Condition Notes',placeholder:'e.g. label scuffed'},
+  ],
+  'Sneakers':[
+    {key:'sn_brand',label:'Brand',placeholder:'e.g. Nike, Adidas'},
+    {key:'sn_model',label:'Model',placeholder:'e.g. Air Jordan 1'},
+    {key:'sn_colourway',label:'Colourway',placeholder:'e.g. Chicago, Bred'},
+    {key:'sn_size',label:'Size (US)',placeholder:'e.g. US 10'},
+    {key:'sn_sku',label:'Style Code / SKU',placeholder:'e.g. 555088 101'},
+    {key:'sn_year',label:'Release Year',placeholder:'e.g. 2015'},
+    {key:'sn_condition',label:'Condition',placeholder:'e.g. Deadstock',type:'select',opts:['Deadstock (DS)','Very Near Deadstock (VNDS)','Used','Beaters']},
+    {key:'sn_box',label:'Original Box',placeholder:'Y / N',type:'select',opts:['Y','N']},
+  ],
+  'Sports Memorabilia':[
+    {key:'sp_sport',label:'Sport',placeholder:'e.g. AFL, Cricket'},
+    {key:'sp_player',label:'Player / Team',placeholder:'e.g. Don Bradman'},
+    {key:'sp_item',label:'Item Type',placeholder:'e.g. Jersey, Ball, Card, Photo'},
+    {key:'sp_year',label:'Year / Season',placeholder:'e.g. 2006'},
+    {key:'sp_signed',label:'Signed',placeholder:'Y / N',type:'select',opts:['Y','N']},
+    {key:'sp_auth',label:'Authentication',placeholder:'e.g. PSA, COA, Club'},
+    {key:'sp_condition',label:'Condition Notes',placeholder:'e.g. slight fading'},
+  ],
+  'Vintage Cameras':[
+    {key:'cam_brand',label:'Brand',placeholder:'e.g. Nikon, Leica'},
+    {key:'cam_model',label:'Model',placeholder:'e.g. F2, M3'},
+    {key:'cam_type',label:'Type',placeholder:'e.g. SLR',type:'select',opts:['SLR','Rangefinder','TLR','Point and Shoot','Folding','Box','Movie','Other']},
+    {key:'cam_format',label:'Film Format',placeholder:'e.g. 35mm, 120, Instant'},
+    {key:'cam_serial',label:'Serial Number',placeholder:'e.g. 7123456'},
+    {key:'cam_year',label:'Year / Era',placeholder:'e.g. 1970s'},
+    {key:'cam_lens',label:'Lens',placeholder:'e.g. 50mm f/1.4'},
+    {key:'cam_working',label:'Working',placeholder:'e.g. Working',type:'select',opts:['Working','Partial','Not Working','Untested']},
+  ],
 };
 // Mining Vehicles is a Diecast sub-type: same fields, same mining catalogue.
 CAT_FIELDS['Mining Vehicles'] = CAT_FIELDS['Diecast'];
