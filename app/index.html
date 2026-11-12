@@ -906,6 +906,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
               <option value="Locomotive">🚂 Locomotive / Train</option>
               <option value="Militaria &amp; Medals">🎖️ Militaria &amp; Medals</option>
               <option value="Minerals &amp; Crystals">💎 Minerals &amp; Crystals</option>
+              <option value="Mining Lamps">🪔 Mining Lamps</option>
               <option value="Mining Vehicles">🚛 Mining Vehicles</option>
               <option value="Movie Memorabilia">🎬 Movie Memorabilia</option>
               <option value="Pin Badges">📌 Pin Badges</option>
@@ -930,6 +931,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
               <input type="text" id="fCategoryEmoji" placeholder="🏷️" style="text-align:center;font-size:18px;margin-top:4px">
               <div class="icon-picker" id="fCategoryEmojiPicker" style="max-height:150px;overflow:auto"></div>
             </div>
+            <div id="fCatEditRow" style="display:none;margin-top:6px"><a href="javascript:void(0)" onclick="editFormCat('f')" style="font-size:12px;color:var(--gold2);cursor:pointer">✎ Rename or change this category icon</a></div>
           </div>
           <div><label>Group / Collection <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
             <div style="display:flex;gap:6px;align-items:center">
@@ -1250,7 +1252,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
     <div class="field-row"><label>Collection Name *</label><input type="text" id="cName" placeholder="e.g. Belt Buckle Collection, My Stamps"></div>
     <div class="field-row-2">
       <div><label>Category</label>
-        <select id="cCategory">
+        <select id="cCategory" onchange="onCCatChange()">
           <option value="">— General —</option>
           <option value="Action Figures">🤖 Action Figures</option>
           <option value="Art Prints">🖼️ Art Prints</option>
@@ -1269,6 +1271,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <option value="Locomotive">🚂 Locomotive / Train</option>
           <option value="Militaria &amp; Medals">🎖️ Militaria &amp; Medals</option>
           <option value="Minerals &amp; Crystals">💎 Minerals &amp; Crystals</option>
+          <option value="Mining Lamps">🪔 Mining Lamps</option>
           <option value="Mining Vehicles">🚛 Mining Vehicles</option>
           <option value="Movie Memorabilia">🎬 Movie Memorabilia</option>
           <option value="Pin Badges">📌 Pin Badges</option>
@@ -1285,7 +1288,15 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <option value="Vinyl Records">💿 Vinyl Records</option>
           <option value="Watches">⌚ Watches</option>
           <option value="Other">📁 Other</option>
+          <option value="__custom__">➕ Add custom…</option>
         </select>
+        <input type="text" id="cCategoryCustom" placeholder="Name your category" style="display:none;margin-top:6px">
+        <div id="cCategoryIconWrap" style="display:none;margin-top:6px">
+          <label style="font-size:11px;color:var(--text3)">Category icon (pick an emoji)</label>
+          <input type="text" id="cCategoryEmoji" placeholder="🏷️" style="text-align:center;font-size:18px;margin-top:4px">
+          <div class="icon-picker" id="cCategoryEmojiPicker" style="max-height:150px;overflow:auto"></div>
+        </div>
+        <div id="cCatEditRow" style="display:none;margin-top:6px"><a href="javascript:void(0)" onclick="editFormCat('c')" style="font-size:12px;color:var(--gold2);cursor:pointer">✎ Rename or change this category icon</a></div>
       </div>
       <div><label>Icon (emoji)</label><input type="text" id="cIcon" placeholder="🗂" style="text-align:center;font-size:18px"></div>
     </div>
@@ -1370,7 +1381,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
     <div class="field-row"><label>Group Name *</label><input type="text" id="gName" placeholder="e.g. Western Buckles, SA Stamps"></div>
     <div class="field-row-2">
       <div><label>Category</label>
-        <select id="gCategory">
+        <select id="gCategory" onchange="onGCatChange()">
           <option value="">— General —</option>
           <option value="Action Figures">🤖 Action Figures</option>
           <option value="Art Prints">🖼️ Art Prints</option>
@@ -1389,6 +1400,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <option value="Locomotive">🚂 Locomotive / Train</option>
           <option value="Militaria &amp; Medals">🎖️ Militaria &amp; Medals</option>
           <option value="Minerals &amp; Crystals">💎 Minerals &amp; Crystals</option>
+          <option value="Mining Lamps">🪔 Mining Lamps</option>
           <option value="Mining Vehicles">🚛 Mining Vehicles</option>
           <option value="Movie Memorabilia">🎬 Movie Memorabilia</option>
           <option value="Pin Badges">📌 Pin Badges</option>
@@ -1405,7 +1417,15 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
           <option value="Vinyl Records">💿 Vinyl Records</option>
           <option value="Watches">⌚ Watches</option>
           <option value="Other">📁 Other</option>
+          <option value="__custom__">➕ Add custom…</option>
         </select>
+        <input type="text" id="gCategoryCustom" placeholder="Name your category" style="display:none;margin-top:6px">
+        <div id="gCategoryIconWrap" style="display:none;margin-top:6px">
+          <label style="font-size:11px;color:var(--text3)">Category icon (pick an emoji)</label>
+          <input type="text" id="gCategoryEmoji" placeholder="🏷️" style="text-align:center;font-size:18px;margin-top:4px">
+          <div class="icon-picker" id="gCategoryEmojiPicker" style="max-height:150px;overflow:auto"></div>
+        </div>
+        <div id="gCatEditRow" style="display:none;margin-top:6px"><a href="javascript:void(0)" onclick="editFormCat('g')" style="font-size:12px;color:var(--gold2);cursor:pointer">✎ Rename or change this category icon</a></div>
       </div>
       <div><label>Icon (emoji)</label><input type="text" id="gIcon" placeholder="📂" style="text-align:center;font-size:18px"></div>
     </div>
@@ -2453,6 +2473,8 @@ async function loadCurrencyPref(){
       try{ localStorage.setItem('hoardrCustomCats',JSON.stringify(customCats)); }catch(e){}
       refreshCategoryOptions(); try{ render(); }catch(e){}
     }
+    const cr=d.exists?d.get('catRenames'):null;
+    if(cr && typeof cr==='object'){ catRenames=Object.assign({},catRenames,cr); try{ localStorage.setItem('hoardrCatRenames',JSON.stringify(catRenames)); }catch(e){} applyCatRenameFields(); refreshCategoryOptions(); try{ render(); }catch(e){} }
     const np=d.exists?d.get('notifPrefs'):null;
     if(np && typeof np==='object'){ notifPrefs=Object.assign(notifPrefs, np); try{ localStorage.setItem('hoardrNotifPrefs',JSON.stringify(notifPrefs)); }catch(e){} }
     if(notifPrefs.enabled && _notifPermission()==='granted'){ _registerPush(); }
@@ -3643,6 +3665,7 @@ function openCollectionModal(id) {
     ['cName','cIcon','cDesc'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('cCategory').value='';
   }
+  _resetFormCat('c'); _onFormCatChange('c');
   openModal('collectionModal');
 }
 
@@ -3658,7 +3681,7 @@ async function saveCollection() {
     showToast(`Free plan covers ${FREE_MAX_COLLECTIONS} collections. Upgrade to Pro for unlimited.`,'🔒'); try{openUpgrade('collections');}catch(_){} return;
   }
   const data = {
-    name, category: document.getElementById('cCategory').value,
+    name, category: _resolveFormCat('c'),
     icon: document.getElementById('cIcon').value,
     desc: document.getElementById('cDesc').value,
     updatedAt: new Date().toISOString()
@@ -3944,6 +3967,7 @@ function openGroupModal(id, presetCollectionId) {
     document.getElementById('gCategory').value='';
     document.getElementById('gCollection').value = presetCollectionId || selectedCollectionId || '';
   }
+  _resetFormCat('g'); _onFormCatChange('g');
   openModal('groupModal');
 }
 
@@ -3952,7 +3976,7 @@ async function saveGroup() {
   if (!name) { showToast('Please enter a group name','⚠️'); return; }
   const id = document.getElementById('editGroupId').value;
   const data = {
-    name, category: document.getElementById('gCategory').value,
+    name, category: _resolveFormCat('g'),
     icon: document.getElementById('gIcon').value,
     desc: document.getElementById('gDesc').value,
     collectionId: document.getElementById('gCollection').value,
@@ -4385,11 +4409,13 @@ function updateStats() {
 }
 function qtyOf(i){ const n=parseInt(i&&i.quantity,10); return (n&&n>0)?n:1; }
 let customCats = [];  // [{name,emoji}] — persistent custom categories (see below)
-const BUILTIN_CATS = ['Action Figures','Art Prints','Autographs','Banknotes','Belt Buckle','Board Games','Bottle Caps','Building Bricks','Cassettes','Coins','Comics','Diecast','Fountain Pens','Keychains','Locomotive','Militaria & Medals','Minerals & Crystals','Mining Vehicles','Movie Memorabilia','Pin Badges','Pocket Knives','Pokémon Cards','Retro Games','Sneakers','Sports Memorabilia','Stamp','Stickers','Toby Jug','Trading Cards','Vintage Cameras','Vinyl Records','Watches','Other'];
+let catRenames = {};  // {originalBuiltinName: newName} — user renames of built-in categories
+function applyCatRenameFields(){ try{ Object.keys(catRenames).forEach(function(orig){ const nn=catRenames[orig]; if(nn&&typeof CAT_FIELDS!=='undefined'&&CAT_FIELDS[orig]&&!CAT_FIELDS[nn]) CAT_FIELDS[nn]=CAT_FIELDS[orig]; }); }catch(e){} }
+const BUILTIN_CATS = ['Action Figures','Art Prints','Autographs','Banknotes','Belt Buckle','Board Games','Bottle Caps','Building Bricks','Cassettes','Coins','Comics','Diecast','Fountain Pens','Keychains','Locomotive','Militaria & Medals','Minerals & Crystals','Mining Lamps','Mining Vehicles','Movie Memorabilia','Pin Badges','Pocket Knives','Pokémon Cards','Retro Games','Sneakers','Sports Memorabilia','Stamp','Stickers','Toby Jug','Trading Cards','Vintage Cameras','Vinyl Records','Watches','Other'];
 function catEmoji(cat){
   const cc=Array.isArray(customCats)?customCats.find(x=>x&&(x.name||x)===cat):null;
   if(cc&&cc.emoji) return cc.emoji;
-  return {'Belt Buckle':'🪙','Stamp':'📮','Diecast':'🚗','Locomotive':'🚂','Stickers':'🏷️','Toby Jug':'🏺','Trading Cards':'🃏','Coins':'💰','Banknotes':'💵','Comics':'📚','Vinyl Records':'💿','Action Figures':'🤖','Watches':'⌚','Militaria & Medals':'🎖️','Art Prints':'🖼️','Autographs':'✍️','Board Games':'🎲','Bottle Caps':'🍾','Building Bricks':'🧱','Cassettes':'📼','Fountain Pens':'🖋️','Keychains':'🔑','Minerals & Crystals':'💎','Mining Vehicles':'🚛','Movie Memorabilia':'🎬','Pin Badges':'📌','Pocket Knives':'🔪','Pokémon Cards':'🎴','Retro Games':'🕹️','Sneakers':'👟','Sports Memorabilia':'🏀','Vintage Cameras':'📷','Other':'📁'}[cat]||'📦';
+  return {'Belt Buckle':'🪙','Stamp':'📮','Diecast':'🚗','Locomotive':'🚂','Stickers':'🏷️','Toby Jug':'🏺','Trading Cards':'🃏','Coins':'💰','Banknotes':'💵','Comics':'📚','Vinyl Records':'💿','Action Figures':'🤖','Watches':'⌚','Militaria & Medals':'🎖️','Art Prints':'🖼️','Autographs':'✍️','Board Games':'🎲','Bottle Caps':'🍾','Building Bricks':'🧱','Cassettes':'📼','Fountain Pens':'🖋️','Keychains':'🔑','Minerals & Crystals':'💎','Mining Lamps':'🪔','Mining Vehicles':'🚛','Movie Memorabilia':'🎬','Pin Badges':'📌','Pocket Knives':'🔪','Pokémon Cards':'🎴','Retro Games':'🕹️','Sneakers':'👟','Sports Memorabilia':'🏀','Vintage Cameras':'📷','Other':'📁'}[cat]||'📦';
 }
 function catColor(cat){return{'Belt Buckle':'#c9a84c','Stamp':'#6aab7a','Diecast':'#5a8eb0','Locomotive':'#8b5e9a','Stickers':'#d08a3a','Toby Jug':'#b5794a','Other':'#c06090'}[cat]||'#7a6e58'}
 
@@ -4956,6 +4982,27 @@ const CAT_FIELDS = {
     {key:'cam_lens',label:'Lens',placeholder:'e.g. 50mm f/1.4'},
     {key:'cam_working',label:'Working',placeholder:'e.g. Working',type:'select',opts:['Working','Partial','Not Working','Untested']},
   ],
+  'Mining Lamps':[
+    {key:'lmp_make',label:'Make',placeholder:'e.g. Protector',type:'select',opts:['Protector Lamp & Lighting','Hailwood & Ackroyd','E. Thomas & Williams','Wolf Safety Lamp','Patterson','CEAG','Oldham','Koehler','Justrite','Friemann & Wolf','Other']},
+    {key:'lmp_model',label:'Model / Pattern',placeholder:'e.g. Type 6, GR6, Cambrian'},
+    {key:'lmp_type',label:'Lamp Type',placeholder:'e.g. Flame safety',type:'select',opts:['Flame safety (Davy)','Flame safety (Clanny)','Flame safety (bonneted)','Oil wick / spout','Carbide / acetylene','Electric cap lamp','Candle / open flame','Other']},
+    {key:'lmp_fuel',label:'Fuel',placeholder:'e.g. Oil',type:'select',opts:['Oil','Naphtha','Carbide (acetylene)','Electric','Candle','Other']},
+    {key:'lmp_height',label:'Height',placeholder:'e.g. 25 cm'},
+    {key:'lmp_width',label:'Width / Diameter',placeholder:'e.g. 9 cm'},
+    {key:'lmp_weight',label:'Weight',placeholder:'e.g. 1.2 kg'},
+    {key:'lmp_base_mat',label:'Base / Fuel Vessel Material',placeholder:'e.g. Brass, steel'},
+    {key:'lmp_bonnet_mat',label:'Bonnet Material',placeholder:'e.g. Steel, brass'},
+    {key:'lmp_burner',label:'Burner / Wick Assembly',placeholder:'e.g. 1',type:'select',opts:['1','2','3']},
+    {key:'lmp_pillars',label:'Pillars (No.)',placeholder:'e.g. 4',type:'select',opts:['0','1','2','3','4','5','6','7','8']},
+    {key:'lmp_gauze_in',label:'Gauze (inner)',placeholder:'e.g. Original',type:'select',opts:['Original','Replaced','Missing','None','Unknown']},
+    {key:'lmp_gauze_out',label:'Gauze (outer)',placeholder:'e.g. Original',type:'select',opts:['Original','Replaced','Missing','None','Unknown']},
+    {key:'lmp_glass',label:'Glass',placeholder:'e.g. Original',type:'select',opts:['Original','Replaced','Cracked','Missing','Unknown']},
+    {key:'lmp_lock',label:'Base Lock Type',placeholder:'e.g. Magnetic',type:'select',opts:['Magnetic','Lead seal','Screw','Rivet','None','Other']},
+    {key:'lmp_hook',label:'Carry Hook',placeholder:'Yes or No',type:'select',opts:['Yes','No']},
+    {key:'lmp_serial',label:'Serial / Colliery Tag',placeholder:'e.g. NCB 1472'},
+    {key:'lmp_mine',label:'Mine / Provenance',placeholder:'e.g. Clipstone Colliery'},
+    {key:'lmp_date',label:'Date / Era',placeholder:'e.g. c.1920'},
+  ],
 };
 // Mining Vehicles is a Diecast sub-type: same fields, same mining catalogue.
 CAT_FIELDS['Mining Vehicles'] = CAT_FIELDS['Diecast'];
@@ -5164,14 +5211,13 @@ function selectGroup(id,e){
   // Drawer stays open — user closes it with the ✕ button
 }
 function filterByCat(cat){
-  if(cat==='__new__'){ const sel=document.getElementById('catFilterSel'); if(sel) sel.value=filterCat; openNewCategoryModal(); return; }
   filterCat=cat;
   highlightCatChip();
   render();
 }
 function renderCatChips(){
   const box=document.getElementById('catChips'); if(!box) return;
-  const BUILTIN=['Belt Buckle','Diecast','Locomotive','Stamp','Stickers','Toby Jug','Other'];
+  const BUILTIN=['Belt Buckle','Diecast','Locomotive','Stamp','Stickers','Toby Jug','Other'].map(b=>catRenames[b]||b);
   const META={'Belt Buckle':'Buckles','Stamp':'Stamps','Diecast':'Diecast','Locomotive':'Trains','Stickers':'Stickers','Toby Jug':'Toby Jugs','Other':'Other'};
   const used=new Set(db.items.map(i=>i.category).filter(Boolean));
   const persist=(Array.isArray(customCats)?customCats:[]).map(x=>x&&x.name?x.name:x).filter(Boolean);
@@ -5181,18 +5227,17 @@ function renderCatChips(){
   let _newCust=false;
   custom.forEach(c=>{ if(!customCats.some(x=>(x&&(x.name||x))===c)){ customCats.push({name:c,emoji:''}); _newCust=true; } });
   if(_newCust){ sortCustomCats(); persistCustomCats(); refreshCategoryOptions(); }
-  const core=BUILTIN.filter(function(b){return b!=='Other';});
+  const otherName=catRenames['Other']||'Other';
+  const core=BUILTIN.filter(function(b){return b!==otherName;});
   const cats=[...core,...custom].sort(function(a,b){return String(a).toLowerCase().localeCompare(String(b).toLowerCase());});
-  cats.push('Other');
+  cats.push(otherName);
   let html=`<select id="catFilterSel" onchange="filterByCat(this.value)" style="width:100%;box-sizing:border-box">`;
-  html+=`<option value="__new__">➕ Create new category…</option>`;
   html+=`<option value="all"${filterCat==='all'?' selected':''}>🗂 All categories</option>`;
   cats.forEach(c=>{
     const label=catEmoji(c)+' '+(META[c]||c);
     html+=`<option value="${escH(c)}"${filterCat===c?' selected':''}>${escH(label)}</option>`;
   });
   html+=`</select>`;
-  html+=`<button class="btn btn-outline btn-sm" id="catFilterEdit" onclick="_editSelectedCat()" style="width:100%;box-sizing:border-box;justify-content:center;margin-top:6px">✏ Edit category</button>`;
   box.innerHTML=html;
   highlightCatChip();
 }
@@ -6957,6 +7002,8 @@ function renderIconPickers(){
   const g=document.getElementById('gIconPicker'); if(g&&!g.dataset.built){ g.innerHTML=buildIconPicker('gIcon'); g.dataset.built='1'; }
   const fc=document.getElementById('fCategoryEmojiPicker'); if(fc&&!fc.dataset.built){ fc.innerHTML=buildIconPicker('fCategoryEmoji'); fc.dataset.built='1'; }
   const ce=document.getElementById('catEmojiInputPicker'); if(ce&&!ce.dataset.built){ ce.innerHTML=buildIconPicker('catEmojiInput'); ce.dataset.built='1'; }
+  const cce=document.getElementById('cCategoryEmojiPicker'); if(cce&&!cce.dataset.built){ cce.innerHTML=buildIconPicker('cCategoryEmoji'); cce.dataset.built='1'; }
+  const gce=document.getElementById('gCategoryEmojiPicker'); if(gce&&!gce.dataset.built){ gce.innerHTML=buildIconPicker('gCategoryEmoji'); gce.dataset.built='1'; }
 }
 window.addEventListener('DOMContentLoaded', renderIconPickers);
 
@@ -7304,6 +7351,7 @@ function onCategoryChange(){
     if(sel.value==='__custom__'){ box.style.display='block'; box.focus(); if(wrap) wrap.style.display='block'; }
     else { box.style.display='none'; box.value=''; if(wrap) wrap.style.display='none'; if(em) em.value=''; }
   }
+  _toggleCatEdit('f', sel.value);
   updateCatFields();
   updateConditionOptions();
   // If this category brings its own fields, reveal the details section so they are seen
@@ -7345,21 +7393,64 @@ function setCategoryField(val){
     if(wrap) wrap.style.display='block';
     if(em){ const cc=customCats.find(x=>(x&&(x.name||x))===val); em.value=cc&&cc.emoji?cc.emoji:''; } }
   else { sel.value=val; if(box){box.style.display='none';box.value='';} if(wrap) wrap.style.display='none'; if(em) em.value=''; }
+  _toggleCatEdit('f', (document.getElementById('fCategory')||{}).value||'');
 }
 
 // ── Persistent custom categories ──
 // Saved to the user's prefs (users/{uid}/settings/prefs) + localStorage, then
 // injected into every category dropdown so a category invented once is reusable
 // forever with no retyping. (customCats is declared up near catEmoji.)
+function _toggleCatEdit(pfx,val){
+  const er=document.getElementById(pfx+'CatEditRow'); if(!er) return;
+  er.style.display=(val && val!=='__custom__' && val!=='')?'block':'none';
+}
+function editFormCat(pfx){
+  const sel=document.getElementById(pfx+'Category'); if(!sel) return;
+  const v=sel.value; if(!v||v==='__custom__') return;
+  openCategoryModal(v);
+}
+function _onFormCatChange(pfx){
+  const sel=document.getElementById(pfx+'Category'); const box=document.getElementById(pfx+'CategoryCustom');
+  const wrap=document.getElementById(pfx+'CategoryIconWrap'); const em=document.getElementById(pfx+'CategoryEmoji');
+  if(!sel||!box) return;
+  if(sel.value==='__custom__'){ box.style.display='block'; try{box.focus();}catch(e){} if(wrap) wrap.style.display='block'; }
+  else { box.style.display='none'; box.value=''; if(wrap) wrap.style.display='none'; if(em) em.value=''; }
+  _toggleCatEdit(pfx, sel.value);
+}
+function onCCatChange(){ _onFormCatChange('c'); }
+function onGCatChange(){ _onFormCatChange('g'); }
+function _resolveFormCat(pfx){
+  const sel=document.getElementById(pfx+'Category'); if(!sel) return '';
+  if(sel.value==='__custom__'){
+    const nm=(document.getElementById(pfx+'CategoryCustom').value||'').trim();
+    if(!nm) return '';
+    const em=(document.getElementById(pfx+'CategoryEmoji').value||'').trim();
+    rememberCustomCat(nm,em);
+    return nm;
+  }
+  return sel.value;
+}
+function _resetFormCat(pfx){
+  const box=document.getElementById(pfx+'CategoryCustom'); if(box){box.style.display='none';box.value='';}
+  const wrap=document.getElementById(pfx+'CategoryIconWrap'); if(wrap) wrap.style.display='none';
+  const em=document.getElementById(pfx+'CategoryEmoji'); if(em) em.value='';
+}
 function refreshCategoryOptions(){
+  const renameTargets=new Set(Object.values(catRenames));
   ['fCategory','cCategory','gCategory'].forEach(id=>{
     const sel=document.getElementById(id); if(!sel) return;
     const keep=sel.value;
     [...sel.querySelectorAll('option[data-custom="1"]')].forEach(o=>o.remove());
+    // relabel built-in options the user has renamed
+    Object.keys(catRenames).forEach(orig=>{
+      const nn=catRenames[orig];
+      [...sel.options].forEach(o=>{ if(o.value===orig){ o.value=nn; o.textContent=(catEmoji(nn)||'🏷️')+' '+nn; } });
+    });
     const anchor=sel.querySelector('option[value="__custom__"]');
     customCats.forEach(c=>{
       const nm=c&&c.name?c.name:c;
       if(BUILTIN_CATS.includes(nm)) return; // builtin emoji override, not a picklist entry
+      if(renameTargets.has(nm)) return;     // already shown as a relabeled built-in option
       const o=document.createElement('option');
       o.value=nm; o.textContent=(c&&c.emoji?c.emoji:'🏷️')+' '+nm; o.setAttribute('data-custom','1');
       if(anchor) sel.insertBefore(o,anchor); else sel.appendChild(o);
@@ -7369,8 +7460,9 @@ function refreshCategoryOptions(){
 }
 function persistCustomCats(){
   try{ localStorage.setItem('hoardrCustomCats',JSON.stringify(customCats)); }catch(e){}
+  try{ localStorage.setItem('hoardrCatRenames',JSON.stringify(catRenames)); }catch(e){}
   if(firebaseMode && currentUser){
-    firestoreDb.doc(`${userPath()}/settings/prefs`).set({customCats},{merge:true})
+    firestoreDb.doc(`${userPath()}/settings/prefs`).set({customCats,catRenames},{merge:true})
       .catch(e=>console.warn('customCats save failed:',e));
   }
 }
@@ -7390,7 +7482,8 @@ function rememberCustomCat(name,emoji){
 }
 function loadCustomCats(){
   try{ const raw=localStorage.getItem('hoardrCustomCats'); if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)) customCats=a; } }catch(e){}
-  normCustomCats(); refreshCategoryOptions();
+  try{ const rr=localStorage.getItem('hoardrCatRenames'); if(rr){ const o=JSON.parse(rr); if(o&&typeof o==='object') catRenames=o; } }catch(e){}
+  normCustomCats(); applyCatRenameFields(); refreshCategoryOptions();
 }
 
 // ── What's New / changelog ──
@@ -7427,12 +7520,12 @@ function openNewCategoryModal(){
 function openCategoryModal(name){
   name=(name||'').trim(); if(!name) return;
   const _t=document.getElementById('categoryModalTitle'); if(_t) _t.textContent='Edit Category';
-  const isBuiltin=BUILTIN_CATS.includes(name);
+  const isBuiltin=BUILTIN_CATS.includes(name) || Object.values(catRenames).indexOf(name)>=0;
   document.getElementById('editCategoryOrig').value=name;
   document.getElementById('editCategoryBuiltin').value=isBuiltin?'1':'';
   const ni=document.getElementById('catName');
-  ni.value=name; ni.readOnly=isBuiltin; ni.style.opacity=isBuiltin?'.6':'';
-  document.getElementById('catBuiltinNote').style.display=isBuiltin?'block':'none';
+  ni.value=name; ni.readOnly=false; ni.style.opacity='';
+  document.getElementById('catBuiltinNote').style.display='none';
   document.getElementById('catDeleteBtn').style.display=isBuiltin?'none':'';
   const dp=document.getElementById('catDeletePanel'); if(dp) dp.style.display='none';
   setIcon('catEmojiInput', catEmoji(name)||'');
@@ -7442,11 +7535,11 @@ async function saveCategory(){
   const oldName=document.getElementById('editCategoryOrig').value;
   const isBuiltin=document.getElementById('editCategoryBuiltin').value==='1';
   const emoji=(document.getElementById('catEmojiInput').value||'').trim();
-  const newName=isBuiltin?oldName:(document.getElementById('catName').value||'').trim();
+  const newName=(document.getElementById('catName').value||'').trim();
   if(!newName){ showToast('Category name is required','⚠️'); return; }
   const isNew = !oldName;
-  const renamed = !isBuiltin && !!oldName && newName!==oldName;
-  if((renamed||isNew) && (BUILTIN_CATS.includes(newName) || customCats.some(x=>(x&&(x.name||x))===newName))){
+  const renamed = !!oldName && newName!==oldName;
+  if((renamed||isNew) && newName!==oldName && (BUILTIN_CATS.includes(newName) || customCats.some(x=>(x&&(x.name||x))===newName) || Object.values(catRenames).indexOf(newName)>=0)){
     showToast('A category with that name already exists','⚠️'); return;
   }
   if(renamed){
@@ -7460,11 +7553,23 @@ async function saveCategory(){
       await batch.commit(); setSyncStatus('synced');
     } else { its.forEach(i=>i.category=newName); grs.forEach(g=>g.category=newName); cos.forEach(c=>c.category=newName); saveLocal(); }
   }
-  const ex=customCats.find(x=>(x&&(x.name||x))===oldName);
   if(isBuiltin){
-    if(emoji){ if(ex) ex.emoji=emoji; else customCats.push({name:oldName,emoji:emoji}); }
-    else if(ex){ customCats=customCats.filter(x=>x!==ex); }
+    if(renamed){
+      // carry the built-in's tailored fields to the new name and record the rename
+      if(typeof CAT_FIELDS!=='undefined' && CAT_FIELDS[oldName] && !CAT_FIELDS[newName]) CAT_FIELDS[newName]=CAT_FIELDS[oldName];
+      let origKey=oldName;
+      Object.keys(catRenames).forEach(k=>{ if(catRenames[k]===oldName) origKey=k; });
+      catRenames[origKey]=newName;
+      customCats=customCats.filter(x=>(x&&(x.name||x))!==oldName);
+      customCats.push({name:newName,emoji:emoji});
+      sortCustomCats();
+    } else {
+      const ex=customCats.find(x=>(x&&(x.name||x))===oldName);
+      if(emoji){ if(ex) ex.emoji=emoji; else customCats.push({name:oldName,emoji:emoji}); }
+      else if(ex){ customCats=customCats.filter(x=>x!==ex); }
+    }
   } else {
+    const ex=customCats.find(x=>(x&&(x.name||x))===oldName);
     if(ex){ ex.name=newName; ex.emoji=emoji; } else { customCats.push({name:newName,emoji:emoji}); }
     sortCustomCats();
   }
@@ -7481,7 +7586,7 @@ function deleteCategory(){
         +db.collections.filter(c=>c.category===name).length;
   const nItems=db.items.filter(i=>i.category===name).length;
   const sel=document.getElementById('catReassign');
-  const targets=BUILTIN_CATS.concat(customCats.map(x=>x&&x.name?x.name:x)).filter((v,i,a)=>v&&v!==name&&a.indexOf(v)===i);
+  const targets=BUILTIN_CATS.map(b=>catRenames[b]||b).concat(customCats.map(x=>x&&x.name?x.name:x)).filter((v,i,a)=>v&&v!==name&&a.indexOf(v)===i);
   sel.innerHTML=targets.map(t=>`<option value="${escH(t)}"${t==='Other'?' selected':''}>${escH(catEmoji(t)+' '+t)}</option>`).join('');
   document.getElementById('catReassignRow').style.display=n?'block':'none';
   document.getElementById('catDeleteMsg').textContent = n
