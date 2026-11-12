@@ -1526,7 +1526,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(201,168,76,.16
 <div class="modal-overlay" id="upgradeModal" onclick="closeIfBg(event,'upgradeModal')">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-width:420px">
     <div class="modal-title" style="text-align:center;display:block">✨ Hoardr Pro</div>
-    <p style="text-align:center;font-size:12px;color:var(--text3);margin:-6px 0 14px">Unlock the AI tools and value tracking</p>
+    <p style="text-align:center;font-size:12px;color:var(--text3);margin:-6px 0 14px">Catalogue. Value. Protect.</p>
     <div id="upgradeBody"></div>
     <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="closeModal('upgradeModal')">Not now</button>
   </div>
@@ -2164,7 +2164,7 @@ function _renderSmartImport(){
   if(_siOver){
     html='<div style="background:rgba(201,168,76,.10);border:1px solid var(--gold);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px">'
       +'<b>This import has '+_siTotal+' items.</b> Your free plan has room for '+_siRoom+' more (the '+FREE_MAX_ITEMS+' item limit).'
-      +'<div style="margin-top:8px"><button class="btn btn-gold btn-sm" onclick="openUpgrade()">Upgrade to Pro to import all '+_siTotal+'</button></div>'
+      +'<div style="margin-top:8px"><button class="btn btn-gold btn-sm" onclick=\"openUpgrade(\'items\')\">Upgrade to Pro to import all '+_siTotal+'</button></div>'
       +'<div style="margin-top:6px;color:var(--text3)">'+(_siRoom>0?('Or import the first '+_siRoom+' now and add the rest after upgrading.'):'Upgrade to import these items.')+'</div>'
       +'</div>'+html;
   }
@@ -2209,7 +2209,7 @@ async function smartImportApply(){
   if(!isPro()){
     const room=Math.max(0,FREE_MAX_ITEMS-db.items.length);
     if(items.length>room){ _held=items.length-room; items=items.slice(0,room); }
-    if(!items.length){ showToast('Your free plan is full ('+FREE_MAX_ITEMS+' items). Upgrade to Pro to import.','🔒'); try{openUpgrade();}catch(_){} return; }
+    if(!items.length){ showToast('Your free plan is full ('+FREE_MAX_ITEMS+' items). Upgrade to Pro to import.','🔒'); try{openUpgrade('items');}catch(_){} return; }
   }
   _siCaptureDest();
   const d=_smartImport.dest||{};
@@ -2388,7 +2388,7 @@ function _handleAiQuota(e){
   const reason=(e&&e.details&&e.details.reason)||'';
   if(reason==='quota_free' || !isProUser){
     showToast((e&&e.message)||'You have reached your free AI limit this month','🔒');
-    try{ openUpgrade(); }catch(_){}
+    try{ openUpgrade('ai'); }catch(_){}
   } else {
     showToast((e&&e.message)||'You have used all your AI actions this month','⏳');
     try{ openTopup(); }catch(_){}
@@ -2521,7 +2521,7 @@ function _proComingSoon(msg){
 }
 // Clear every cached lookup and start over, for the case where Play was
 // briefly unreachable.
-function _retryUpgrade(){ _dgSvc=null; _playDetails=null; openUpgrade(); }
+function _retryUpgrade(){ _dgSvc=null; _playDetails=null; openUpgrade(_upgCtx); }
 // ── Google Play billing (Android app only) ─────────────────────────
 // Play requires digital goods bought inside a Play app to go through Play
 // Billing. On Android we talk to the Digital Goods API; on the web none of
@@ -2661,19 +2661,52 @@ function _renderUpgradePlayBody(){
     ? (_td+' days free, then '+price+per+'. Billed through Google Play. Cancel anytime in your Google Play account.')
     : 'Billed through Google Play. Cancel anytime in your Google Play account.';
   box.innerHTML =
-    '<div style="display:flex;gap:8px;margin-bottom:14px">'
+    _upgCtxHtml()
+    +'<div style="display:flex;gap:8px;margin-bottom:14px">'
      +'<button class="btn '+(annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'annual\')">Yearly \u00b7 best value</button>'
      +'<button class="btn '+(!annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'monthly\')">Monthly</button>'
     +'</div>'
     +'<div style="text-align:center;margin-bottom:3px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">'+price+'<span style="font-size:13px;color:var(--text3)">'+per+'</span></span></div>'
-    +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">'+(annual?'Billed yearly. Switch to monthly anytime.':'Billed monthly. Switch to yearly anytime to save.')+'</div>'
-    +'<div style="display:flex;flex-direction:column;gap:9px;margin-bottom:14px">'
-     +PRO_FEATURES.map(function(f){ return '<div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:16px">'+f[0]+'</span><span style="flex:1"><span style="font-size:13px;color:var(--text)">'+f[1]+'</span><br><span style="font-size:11px;color:var(--text3)">'+f[2]+'</span></span></div>'; }).join('')
-    +'</div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">'+(annual?'Billed yearly. Around 40% off the monthly price.':'Billed monthly. Switch to yearly anytime to save.')+'</div>'
+    +_upgCmpHtml()
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="_playBuyPlan(\''+(annual?'annual':'monthly')+'\')">'+_btn+'</button>'
     +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">'+_note+'</p>';
 }
-async function openUpgrade(){
+let _upgCtx='';
+function _upgCtxHtml(){
+  const M={
+    items:['🔒','Your free plan is full at '+FREE_MAX_ITEMS+' items. Pro removes the limit.'],
+    collections:['🔒','Free covers '+FREE_MAX_COLLECTIONS+' collections. Pro makes them unlimited.'],
+    ai:['⚡','You have used your 5 free AI actions for this month. Pro gives you 50.'],
+    duplicate:['🔒','Duplicate item is a Pro tool.'],
+    insurance:['📄','The insurance schedule PDF is a Pro feature.'],
+    catalogue:['📄','The catalogue PDF is a Pro feature.']
+  };
+  const m=M[_upgCtx]; if(!m) return '';
+  return '<div style="background:rgba(216,168,56,.10);border:1px solid rgba(216,168,56,.35);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:12.5px;color:var(--text);display:flex;gap:8px;align-items:flex-start"><span>'+m[0]+'</span><span>'+m[1]+'</span></div>';
+}
+function _upgCmpHtml(){
+  const X='<span style="color:var(--text3)">✕</span>', T='<span style="color:var(--gold2);font-weight:700">✓</span>';
+  const rows=[
+    ['Items','200','Unlimited'],
+    ['Collections','5','Unlimited'],
+    ['Photos per item','3','6'],
+    ['AI actions a month','5','50'],
+    ['Monthly value report',X,T],
+    ['Insurance schedule PDF',X,T],
+    ['Catalogue PDF',X,T],
+    ['Duplicate item',X,T],
+    ['Excel export, share pages, backup',T,T]
+  ];
+  return '<div style="border:1px solid rgba(255,255,255,.09);border-radius:12px;overflow:hidden;margin-bottom:10px">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12.5px">'
+    +'<tr><td style="padding:7px 10px"></td><td style="padding:7px 4px;text-align:center;color:var(--text3);font-weight:600;font-size:11px;width:62px">FREE</td><td style="padding:7px 4px;text-align:center;color:var(--gold2);font-weight:700;font-size:11px;width:72px;background:rgba(216,168,56,.08)">PRO</td></tr>'
+    +rows.map(function(r){ return '<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:6px 10px;color:var(--text)">'+r[0]+'</td><td style="padding:6px 4px;text-align:center;color:var(--text3)">'+r[1]+'</td><td style="padding:6px 4px;text-align:center;color:var(--text);background:rgba(216,168,56,.08)">'+r[2]+'</td></tr>'; }).join('')
+    +'</table></div>'
+    +'<p style="font-size:11px;color:var(--text3);text-align:center;margin:0 0 12px">AI actions cover photo cataloguing, Smart Import and value estimates from real online sales.</p>';
+}
+async function openUpgrade(ctx){
+  _upgCtx=(typeof ctx==='string')?ctx:'';
   if(IS_ANDROID_APP){
     const svc=await playService();
     if(svc){ _upgPlan='annual'; openModal('upgradeModal'); _renderUpgradePlay(); return; }
@@ -2711,18 +2744,17 @@ function _renderUpgrade(){
   const box=document.getElementById('upgradeBody'); if(!box) return;
   const annual=_upgPlan==='annual';
   const price = annual ? 'A$49.99<span style="font-size:13px;color:var(--text3)">/year</span>' : 'A$6.99<span style="font-size:13px;color:var(--text3)">/month</span>';
-  const sub = annual ? 'Just ~A$4.17/month, billed yearly — around 40% off monthly.' : 'Billed monthly. Switch to yearly anytime to save.';
+  const sub = annual ? 'About A$4.17 a month, billed yearly. Around 40% off monthly.' : 'Billed monthly. Switch to yearly anytime to save.';
   const feats=PRO_FEATURES;
   box.innerHTML =
-    '<div style="display:flex;gap:8px;margin-bottom:14px">'
+    _upgCtxHtml()
+    +'<div style="display:flex;gap:8px;margin-bottom:14px">'
      +'<button class="btn '+(annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'annual\')">Yearly · best value</button>'
      +'<button class="btn '+(!annual?'btn-gold':'btn-outline')+' btn-sm" style="flex:1;justify-content:center" onclick="setUpgPlan(\'monthly\')">Monthly</button>'
     +'</div>'
     +'<div style="text-align:center;margin-bottom:3px"><span style="font-size:30px;font-weight:700;color:var(--gold2)">'+price+'</span></div>'
     +'<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:14px">'+sub+'</div>'
-    +'<div style="display:flex;flex-direction:column;gap:9px;margin-bottom:14px">'
-     +feats.map(function(f){ return '<div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:16px">'+f[0]+'</span><span style="flex:1"><span style="font-size:13px;color:var(--text)">'+f[1]+'</span><br><span style="font-size:11px;color:var(--text3)">'+f[2]+'</span></span></div>'; }).join('')
-    +'</div>'
+    +_upgCmpHtml()
     +'<button class="btn btn-gold" style="width:100%;justify-content:center" onclick="startCheckout(\''+_upgPlan+'\')">Start 7-day free trial</button>'
     +'<p style="font-size:10px;color:var(--text3);text-align:center;margin:10px 0 0">7 days free, then '+(annual?'A$49.99/year':'A$6.99/month')+'. Cancel anytime in your account. Billed in AUD via Stripe.</p>';
 }
@@ -3627,7 +3659,7 @@ async function saveCollection() {
     showToast(`You've reached the ${HARD_MAX_COLLECTIONS}-collection limit. Contact support if you need more.`,'⚠️'); return;
   }
   if (!id && !isPro() && db.collections.length >= FREE_MAX_COLLECTIONS) {
-    showToast(`Free plan covers ${FREE_MAX_COLLECTIONS} collections. Upgrade to Pro for unlimited.`,'🔒'); try{openUpgrade();}catch(_){} return;
+    showToast(`Free plan covers ${FREE_MAX_COLLECTIONS} collections. Upgrade to Pro for unlimited.`,'🔒'); try{openUpgrade('collections');}catch(_){} return;
   }
   const data = {
     name, category: document.getElementById('cCategory').value,
@@ -4115,7 +4147,7 @@ async function saveItem() {
     showToast(`You've reached the ${HARD_MAX_ITEMS.toLocaleString()}-item limit. Contact support if you need more.`,'⚠️'); return;
   }
   if (!document.getElementById('editId').value && !isPro() && db.items.length >= FREE_MAX_ITEMS) {
-    showToast(`Free plan covers ${FREE_MAX_ITEMS} items. Upgrade to Pro for unlimited.`,'🔒'); try{openUpgrade();}catch(_){} return;
+    showToast(`Free plan covers ${FREE_MAX_ITEMS} items. Upgrade to Pro for unlimited.`,'🔒'); try{openUpgrade('items');}catch(_){} return;
   }
   rememberCustomCat(getCategoryValue(), getCategoryEmoji());
   const btn = document.getElementById('saveItemBtn');
@@ -4240,7 +4272,7 @@ async function deleteItem(id) {
 }
 
 function duplicateItem(id) {
-  if(!isPro()){ showToast('Duplicate item is a Pro feature.','🔒'); try{openUpgrade();}catch(_){} return; }
+  if(!isPro()){ showToast('Duplicate item is a Pro feature.','🔒'); try{openUpgrade('duplicate');}catch(_){} return; }
   const original = db.items.find(i=>i.id===id);
   if (!original) return;
   const copy = JSON.parse(JSON.stringify(original));
@@ -5725,7 +5757,7 @@ async function exportInsuranceSchedule(scopeId){
   const _scopeName = _scoped ? (_cols.length===1 ? ((_cols[0]&&_cols[0].name)||'Collection') : (_cols.length+' collections')) : '';
   if(_scoped && !_items.length){ showToast('Nothing to export in what you picked','⚠️'); return; }
 
-  if(!isPro()){ showToast('The insurance schedule is a Pro feature.','🔒'); try{openUpgrade();}catch(_){} return; }
+  if(!isPro()){ showToast('The insurance schedule is a Pro feature.','🔒'); try{openUpgrade('insurance');}catch(_){} return; }
   if(!_items.length){ showToast('No items to report','⚠️'); return; }
   expProgShow('Insurance schedule','Starting');
   await new Promise(r=>setTimeout(r,60));
@@ -6092,7 +6124,7 @@ async function exportPDF(scopeId, inclPrices){
   const _scopeName = _scoped ? (_cols.length===1 ? ((_cols[0]&&_cols[0].name)||'Collection') : (_cols.length+' collections')) : '';
   if(_scoped && !_items.length){ showToast('Nothing to export in what you picked','⚠️'); return; }
 
-  if(!isPro()){ showToast('The catalogue PDF is a Pro feature. Your data stays exportable free via Excel.','🔒'); try{openUpgrade();}catch(_){} return; }
+  if(!isPro()){ showToast('The catalogue PDF is a Pro feature. Your data stays exportable free via Excel.','🔒'); try{openUpgrade('catalogue');}catch(_){} return; }
   if(!_items.length){showToast('No items to export','⚠️');return;}
   const inclPhotos = isPro();
   const _inclPrices = (inclPrices !== false);
