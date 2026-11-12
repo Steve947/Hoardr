@@ -3245,15 +3245,12 @@ function initFirebase() {
     try { firestoreDb.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED }); }
     catch(e){ console.warn('Firestore cache-size setting failed (non-fatal):', e); }
     firestoreDb.enablePersistence({ synchronizeTabs: true })
-      .then(() => console.log('Firestore offline cache enabled'))
       .catch(err => console.warn('Firestore offline cache unavailable (non-fatal):', err && err.code));
     auth = firebase.auth();
     storage = firebase.storage();
     firebaseMode = true;
     document.getElementById('cloudBadge').textContent = '☁ CLOUD';
     document.getElementById('modeLabel').textContent = 'Cloud Sync';
-    // Log current domain for debugging
-    console.log('Hoardr running on domain:', window.location.hostname);
     setupAuthListener();
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -3303,8 +3300,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Register service worker for PWA / offline support
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('Hoardr SW registered:', reg.scope))
-      .catch(err => console.log('SW registration failed:', err));
+      .catch(() => {});
   }
 });
 
