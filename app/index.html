@@ -2122,13 +2122,34 @@ function _siFromSpreadsheet(buf,fname){
     _aiFn()({mode:'map_import', headers, sampleRows:rows.slice(0,5), coreFields:Object.keys(_SI_CORE), catalog:_siCatalog()})
       .then(resp=>{ const r=(resp.data&&resp.data.result)||{};
         _smartImport={ kind:'table', fname, rows, headers, coreFields:Object.keys(_SI_CORE), category:(r.category&&CAT_FIELDS[r.category])?r.category:'', mapping:r.mapping||{}, transforms:r.transforms||[] };
+        _siAutoMap(true);
         _renderSmartImport();
       }).catch(_siErr);
   }catch(err){ _siShowErr('Could not read that spreadsheet'); }
 }
-function _siTargets(){ const s=_smartImport; const cf=s.category?CAT_FIELDS[s.category].map(f=>f.label):[]; return ['ignore'].concat(s.coreFields||Object.keys(_SI_CORE)).concat(cf); }
+function _siNorm(x){ return String(x==null?'':x).trim().toLowerCase(); }
+function _siAutoMap(infer){
+  const s=_smartImport; if(!s||s.kind!=='table') return;
+  if(infer && !s.category){
+    let best='', bestN=0;
+    Object.keys(CAT_FIELDS).forEach(c=>{ const labs=new Set(CAT_FIELDS[c].map(f=>_siNorm(f.label))); let n=0; s.headers.forEach(h=>{ if(labs.has(_siNorm(h))) n++; }); if(n>bestN){ bestN=n; best=c; } });
+    if(bestN>=2) s.category=best;
+  }
+  const coreByNorm={}; Object.keys(_SI_CORE).forEach(l=>coreByNorm[_siNorm(l)]=l);
+  const catByNorm={}; if(s.category&&CAT_FIELDS[s.category]) CAT_FIELDS[s.category].forEach(f=>catByNorm[_siNorm(f.label)]=f.label);
+  (s.headers||[]).forEach(h=>{
+    const n=_siNorm(h); let exact=null;
+    if(n==='collection'||n==='collection name') exact='Collection';
+    else if(n==='group'||n==='group name'||n==='sub collection'||n==='subcollection') exact='Group';
+    else if(coreByNorm[n]) exact=coreByNorm[n];
+    else if(catByNorm[n]) exact=catByNorm[n];
+    else if(n==='photo'||n==='photos'||n==='image'||n.indexOf('photo (')===0||n.indexOf('photo link')>=0||n.indexOf('image link')>=0) exact='Photo';
+    if(exact) s.mapping[h]=exact; // exact Hoardr labels always win over AI guesses
+  });
+}
+function _siTargets(){ const s=_smartImport; const cf=s.category?CAT_FIELDS[s.category].map(f=>f.label):[]; return ['ignore','Collection','Group','Photo'].concat(s.coreFields||Object.keys(_SI_CORE)).concat(cf); }
 function _siCapture(){ if(_smartImport&&_smartImport.kind==='table') document.querySelectorAll('#smartImportBody [data-simap]').forEach(sel=>{ _smartImport.mapping[sel.getAttribute('data-simap')]=sel.value; }); }
-function _siSetCat(v){ _siCapture(); _siCaptureDest(); _smartImport.category=v; _renderSmartImport(); }
+function _siSetCat(v){ _siCapture(); _siCaptureDest(); _smartImport.category=v; _siAutoMap(false); _renderSmartImport(); }
 function _siCaptureDest(){
   if(!_smartImport) return; const d=_smartImport.dest||(_smartImport.dest={});
   const cs=document.getElementById('siDestCol'); if(cs) d.col=cs.value;
@@ -2145,6 +2166,9 @@ function _renderSmartImport(){
   const d = s.dest || (s.dest = {col:'', colName:'Imported: '+(s.fname||'list'), grp:'', grpName:'Imported items'});
   const _cols = db.collections || [];
   html += '<div class="section-heading">Destination</div>';
+  const _mapHasCol = s.kind==='table' && Object.values(s.mapping||{}).indexOf('Collection')>=0;
+  const _mapHasGrp = s.kind==='table' && Object.values(s.mapping||{}).indexOf('Group')>=0;
+  if(_mapHasCol) html += '<p style="font-size:12px;color:var(--gold2);margin:2px 0 8px">A Collection column was detected, so each row goes to its own collection'+(_mapHasGrp?' and group':'')+'. The choice below is only used for rows that leave it blank.</p>';
   html += '<div class="field-row"><label>Collection</label><select id="siDestCol" onchange="_siSetDest()">'
     + '<option value="">— Select collection —</option>'
     + _cols.map(c=>'<option value="'+escH(c.id)+'"'+(d.col===c.id?' selected':'')+'>'+escH(c.name)+'</option>').join('')
@@ -2200,7 +2224,10 @@ function _siItemFromValues(values,category){
   const item={name:'',category:category,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',postage:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
   const cfBy={}; if(category&&CAT_FIELDS[category]) CAT_FIELDS[category].forEach(f=>cfBy[f.label]=f.key);
   Object.keys(values||{}).forEach(label=>{ let v=values[label]; v=(v==null?'':String(v)).trim(); if(!v)return;
-    if(_SI_CORE[label]){ const k=_SI_CORE[label]; if(k==='value'||k==='purchasePrice'||k==='postage')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
+    if(label==='Collection'){ item._impCol=v; }
+    else if(label==='Group'){ item._impGrp=v; }
+    else if(label==='Photo'){ item.photos=[v]; }
+    else if(_SI_CORE[label]){ const k=_SI_CORE[label]; if(k==='value'||k==='purchasePrice'||k==='postage')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
     else if(cfBy[label]) item.catFieldVals[cfBy[label]]=v; });
   if(!item.name){ const parts=Object.values(item.catFieldVals).filter(Boolean).slice(0,3); item.name=parts.join(' ').trim(); }
   return item;
@@ -2208,8 +2235,11 @@ function _siItemFromValues(values,category){
 function _siBuildItem(row){
   const s=_smartImport; const cat=s.category; const item={name:'',category:cat,groupId:'',condition:'',material:'',value:'',height:'',width:'',dimUnit:'mm',rating:0,quantity:1,obtainedDate:'',obtainedFrom:'',purchasePrice:'',postage:'',seller:'',provenance:'',certRef:'',insurance:'',shortDesc:'',notes:'',history:'',tags:'',photos:[],extraFields:[],catFieldVals:{}};
   const cfBy={}; if(cat) CAT_FIELDS[cat].forEach(f=>cfBy[f.label]=f.key);
-  s.headers.forEach(h=>{ const t=s.mapping[h]; if(!t||t==='ignore')return; let v=row[h]; v=(v==null?'':String(v)).trim();
-    if(_SI_CORE[t]){ const k=_SI_CORE[t]; if(k==='value'||k==='purchasePrice'||k==='postage')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
+  s.headers.forEach(h=>{ const t=s.mapping[h]; if(!t||t==='ignore')return; let v=row[h]; v=(v==null?'':String(v)).trim(); if(!v)return;
+    if(t==='Collection'){ item._impCol=v; }
+    else if(t==='Group'){ item._impGrp=v; }
+    else if(t==='Photo'){ item.photos=[v]; }
+    else if(_SI_CORE[t]){ const k=_SI_CORE[t]; if(k==='value'||k==='purchasePrice'||k==='postage')item[k]=_siNum(v); else if(k==='quantity')item.quantity=parseInt(String(v).replace(/[^0-9]/g,''),10)||1; else if(k==='rating')item.rating=parseInt(String(v).replace(/[^0-9]/g,''),10)||0; else item[k]=v; }
     else if(cfBy[t]) item.catFieldVals[cfBy[t]]=v; });
   if(!item.name){ const parts=Object.values(item.catFieldVals).filter(Boolean).slice(0,3); item.name=parts.join(' ').trim(); }
   return item;
@@ -2233,8 +2263,10 @@ async function smartImportApply(){
   }
   _siCaptureDest();
   const d=_smartImport.dest||{};
-  if(!d.col){ showToast('Choose a collection first','⚠️'); return; }
-  if(d.col!=='__new__' && !d.grp){ showToast('Choose a group first','⚠️'); return; }
+  const mapHasCol = Object.values(s.mapping||{}).indexOf('Collection')>=0;
+  const perRow = mapHasCol || items.some(it=>String(it._impCol||'').trim());
+  if(!d.col && !perRow){ showToast('Choose a collection first','⚠️'); return; }
+  if(d.col && d.col!=='__new__' && !d.grp && !perRow){ showToast('Choose a group first','⚠️'); return; }
   const useExistingCol = !!(d.col && d.col!=='__new__');
   const newColName = (String(d.colName||'').trim()) || ('Imported: '+(s.fname||'list'));
   const useExistingGrp = useExistingCol && !!(d.grp && d.grp!=='__new__');
@@ -2242,22 +2274,49 @@ async function smartImportApply(){
   const destName = useExistingCol ? (((db.collections||[]).find(c=>c.id===d.col)||{}).name || newColName) : newColName;
   const btn=document.getElementById('siImportBtn'); const orig=btn?btn.textContent:''; if(btn){btn.disabled=true; btn.textContent='Importing…';}
   const now=()=>new Date().toISOString();
+  const FB=firebaseMode;
   try{
-    if(firebaseMode){ setSyncStatus('syncing');
-      let colId = useExistingCol ? d.col : null;
-      if(!colId){ const colRef=await firestoreDb.collection(userPath()+'/collections').add({name:newColName, category:s.category||'', icon:'📦', desc:'Imported via AI Smart Import', createdAt:now(), updatedAt:now()}); colId=colRef.id; }
-      let grpId = useExistingGrp ? d.grp : null;
-      if(!grpId){ const grpRef=await firestoreDb.collection(userPath()+'/groups').add({name:newGrpName, category:s.category||'', icon:'📦', desc:'', collectionId:colId, createdAt:now(), updatedAt:now()}); grpId=grpRef.id; }
-      for(let i=0;i<items.length;i+=400){ const b=firestoreDb.batch(); items.slice(i,i+400).forEach(it=>{ const ref=firestoreDb.collection(userPath()+'/items').doc(); b.set(ref, Object.assign({},it,{groupId:grpId,createdAt:now(),updatedAt:now()})); }); await b.commit(); }
+    if(FB) setSyncStatus('syncing');
+    const colByName={}; (db.collections||[]).forEach(c=>{ if(c&&c.name) colByName[c.name.trim().toLowerCase()]=c.id; });
+    const grpByKey={}; (db.groups||[]).forEach(g=>{ if(g&&g.name) grpByKey[(g.collectionId||'')+'|'+g.name.trim().toLowerCase()]=g.id; });
+    async function ensureCol(name){
+      const key=name.trim().toLowerCase(); if(colByName[key]) return colByName[key];
+      let id;
+      if(FB){ const ref=await firestoreDb.collection(userPath()+'/collections').add({name:name.trim(), category:s.category||'', icon:'📦', desc:'Imported via AI Smart Import', createdAt:now(), updatedAt:now()}); id=ref.id; }
+      else { id=uid(); db.collections.push({id,name:name.trim(),category:s.category||'',icon:'📦',desc:'Imported via AI Smart Import',createdAt:now(),_open:true}); }
+      colByName[key]=id; return id;
+    }
+    async function ensureGrp(colId,name){
+      const key=colId+'|'+name.trim().toLowerCase(); if(grpByKey[key]) return grpByKey[key];
+      let id;
+      if(FB){ const ref=await firestoreDb.collection(userPath()+'/groups').add({name:name.trim(), category:s.category||'', icon:'📦', desc:'', collectionId:colId, createdAt:now(), updatedAt:now()}); id=ref.id; }
+      else { id=uid(); db.groups.push({id,name:name.trim(),collectionId:colId,category:s.category||'',icon:'📦',desc:'',createdAt:now(),_open:true}); }
+      grpByKey[key]=id; return id;
+    }
+    let defColId = useExistingCol ? d.col : null;
+    for(const it of items){
+      const cName=String(it._impCol||'').trim();
+      const gName=String(it._impGrp||'').trim();
+      let colId;
+      if(cName) colId=await ensureCol(cName);
+      else if(useExistingCol) colId=d.col;
+      else { if(!defColId) defColId=await ensureCol(newColName); colId=defColId; }
+      let grpId;
+      if(gName) grpId=await ensureGrp(colId,gName);
+      else if(cName) grpId=await ensureGrp(colId,newGrpName);
+      else if(useExistingGrp) grpId=d.grp;
+      else grpId=await ensureGrp(colId,newGrpName);
+      it.groupId=grpId; delete it._impCol; delete it._impGrp;
+    }
+    if(FB){
+      for(let i=0;i<items.length;i+=400){ const b=firestoreDb.batch(); items.slice(i,i+400).forEach(it=>{ const ref=firestoreDb.collection(userPath()+'/items').doc(); b.set(ref, Object.assign({},it,{createdAt:now(),updatedAt:now()})); }); await b.commit(); }
       setSyncStatus('synced');
     } else {
-      let colId = useExistingCol ? d.col : null;
-      if(!colId){ colId=uid(); db.collections.push({id:colId,name:newColName,category:s.category||'',icon:'📦',desc:'Imported via AI Smart Import',createdAt:now(),_open:true}); }
-      let grpId = useExistingGrp ? d.grp : null;
-      if(!grpId){ grpId=uid(); db.groups.push({id:grpId,name:newGrpName,collectionId:colId,category:s.category||'',icon:'📦',desc:'',createdAt:now(),_open:true}); }
-      items.forEach(it=>db.items.push(Object.assign({id:uid()},it,{groupId:grpId,createdAt:now()}))); saveLocal(); render();
+      items.forEach(it=>db.items.push(Object.assign({id:uid()},it,{createdAt:now()}))); saveLocal(); render();
     }
-    closePanel('smartImportOverlay'); showToast('Imported '+items.length+' items into "'+destName+'"'+(_held>0?('. '+_held+' held, upgrade to Pro to add them'):''),'✓');
+    const nGroups=new Set(items.map(it=>it.groupId)).size;
+    closePanel('smartImportOverlay');
+    showToast('Imported '+items.length+' items'+(perRow&&nGroups>1?(' across '+nGroups+' groups'):(' into "'+destName+'"'))+(_held>0?('. '+_held+' held, upgrade to Pro to add them'):''),'✓');
   }catch(e){ showToast('Import failed: '+((e&&e.message)||'try again'),'⚠️'); }
   finally{ if(btn){btn.disabled=false; btn.textContent=orig||'Import items';} }
 }
