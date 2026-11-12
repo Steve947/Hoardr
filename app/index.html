@@ -2025,6 +2025,7 @@ function aiFillApply(){
     const el=document.getElementById(r.key); if(!el)return;
     if(r.key==='fNotes' && el.value.trim()){ el.value=el.value.trim()+'\n'+r.value; } else { el.value=r.value; } n++;
     if(r.key==='fNotes') filledNotes=true; });
+  try{ _syncCatSelects(); }catch(e){}
   // Reveal the sections the AI just wrote into so nothing is applied out of sight
   if(n){ openAfSect('afsecDetails'); if(filledNotes) openAfSect('afsecNotes'); }
   showToast(n?('Applied '+n+' field'+(n>1?'s':'')+' — review & save'):'Nothing selected','✨');
@@ -2534,6 +2535,8 @@ async function loadCurrencyPref(){
     }
     const cr=d.exists?d.get('catRenames'):null;
     if(cr && typeof cr==='object'){ catRenames=Object.assign({},catRenames,cr); try{ localStorage.setItem('hoardrCatRenames',JSON.stringify(catRenames)); }catch(e){} applyCatRenameFields(); refreshCategoryOptions(); try{ render(); }catch(e){} }
+    const co=d.exists?d.get('catOpts'):null;
+    if(co && typeof co==='object'){ catOpts=Object.assign({},catOpts,co); try{ localStorage.setItem('hoardrCatOpts',JSON.stringify(catOpts)); }catch(e){} }
     const np=d.exists?d.get('notifPrefs'):null;
     if(np && typeof np==='object'){ notifPrefs=Object.assign(notifPrefs, np); try{ localStorage.setItem('hoardrNotifPrefs',JSON.stringify(notifPrefs)); }catch(e){} }
     if(notifPrefs.enabled && _notifPermission()==='granted'){ _registerPush(); }
@@ -4270,6 +4273,8 @@ async function saveItem() {
     });
     const catFieldVals = {};
     document.querySelectorAll('[data-catfield]').forEach(el=>{ catFieldVals[el.dataset.catfield]=el.value; });
+    const _saveCat=getCategoryValue();
+    if(_saveCat && CAT_FIELDS[_saveCat]) CAT_FIELDS[_saveCat].forEach(f=>{ if(f.type==='select'&&f.opts&&f.opts.indexOf('Other')>=0){ const v=(catFieldVals[f.key]||'').trim(); if(v && f.opts.map(x=>String(x).toLowerCase()).indexOf(v.toLowerCase())<0) rememberCatOpt(f.key, v); } });
 
     const itemData = {
       name, category: getCategoryValue(),
@@ -4469,6 +4474,7 @@ function updateStats() {
 function qtyOf(i){ const n=parseInt(i&&i.quantity,10); return (n&&n>0)?n:1; }
 let customCats = [];  // [{name,emoji}] — persistent custom categories (see below)
 let catRenames = {};  // {originalBuiltinName: newName} — user renames of built-in categories
+let catOpts = {};  // {fieldKey:[customOption,...]} — user-added options for category select fields
 function applyCatRenameFields(){ try{ Object.keys(catRenames).forEach(function(orig){ const nn=catRenames[orig]; if(nn&&typeof CAT_FIELDS!=='undefined'&&CAT_FIELDS[orig]&&!CAT_FIELDS[nn]) CAT_FIELDS[nn]=CAT_FIELDS[orig]; }); }catch(e){} }
 const BUILTIN_CATS = ['Action Figures','Art Prints','Autographs','Banknotes','Belt Buckle','Board Games','Bottle Caps','Building Bricks','Cassettes','Coins','Comics','Diecast','Fountain Pens','Keychains','Locomotive','Militaria & Medals','Minerals & Crystals','Mining Lamps','Mining Vehicles','Movie Memorabilia','Pin Badges','Pocket Knives','Pokémon Cards','Retro Games','Sneakers','Sports Memorabilia','Stamp','Stickers','Toby Jug','Trading Cards','Vintage Cameras','Vinyl Records','Watches','Other'];
 function catEmoji(cat){
@@ -5063,7 +5069,7 @@ const CAT_FIELDS = {
     {key:'lmp_lock',label:'Base Lock Type',placeholder:'e.g. Magnetic',type:'select',opts:['Magnetic','Lead seal','Screw','Rivet','Padlock','None','Other']},
     {key:'lmp_hook',label:'Carry Hook',placeholder:'Yes or No',type:'select',opts:['Yes','No']},
     {key:'lmp_serial',label:'Serial / Colliery Tag',placeholder:'e.g. NCB 1472'},
-    {key:'lmp_mine',label:'Mine / Provenance',placeholder:'e.g. Clipstone Colliery'},
+    {key:'lmp_mine',label:'Mine',placeholder:'e.g. Clipstone Colliery'},
     {key:'lmp_date',label:'Date / Era',placeholder:'e.g. c.1920'},
   ],
 };
@@ -5087,7 +5093,17 @@ function updateCatFields(){
             <div class="msel-panel" id="cf_${f.key}_panel">${boxes}</div></div>`;
         }
         if(f.type==='select'&&f.opts){
-          const opts=f.opts.map(o=>`<option value="${escH(String(o))}">${escH(String(o))}</option>`).join('');
+          const base=f.opts.map(String);
+          if(base.indexOf('Other')>=0){
+            const customs=(catOpts[f.key]||[]).filter(o=>base.map(x=>x.toLowerCase()).indexOf(String(o).toLowerCase())<0);
+            const listOpts=base.filter(o=>o!=='Other').concat(customs);
+            const opts=listOpts.map(o=>`<option value="${escH(String(o))}">${escH(String(o))}</option>`).join('');
+            return `<div><label>${f.label}</label>`
+              +`<input type="hidden" data-catfield="${f.key}" id="cf_${f.key}">`
+              +`<select id="cf_${f.key}_sel" onchange="_selPick('${f.key}')"><option value="">— Select —</option>${opts}<option value="__other__">Other (add new)\u2026</option></select>`
+              +`<input type="text" id="cf_${f.key}_new" placeholder="Type a new ${escH(String(f.label).toLowerCase())}" style="display:none;margin-top:6px" oninput="_selNew('${f.key}')"></div>`;
+          }
+          const opts=base.map(o=>`<option value="${escH(String(o))}">${escH(String(o))}</option>`).join('');
           return `<div><label>${f.label}</label><select data-catfield="${f.key}" id="cf_${f.key}"><option value="">— Select —</option>${opts}</select></div>`;
         }
         return `<div><label>${f.label}</label><input type="text" data-catfield="${f.key}" placeholder="${f.placeholder||''}" id="cf_${f.key}"></div>`;
@@ -5095,9 +5111,32 @@ function updateCatFields(){
     </div>`).join('');
   if(cat==='Diecast'||cat==='Mining Vehicles') _wireCatalogAC();
 }
+function _selPick(key){
+  const sel=document.getElementById('cf_'+key+'_sel'); if(!sel) return;
+  const hid=document.getElementById('cf_'+key); const box=document.getElementById('cf_'+key+'_new');
+  if(sel.value==='__other__'){ if(box){ box.style.display='block'; try{box.focus();}catch(e){} } if(hid) hid.value=(box&&box.value||'').trim(); }
+  else { if(box){ box.style.display='none'; box.value=''; } if(hid) hid.value=sel.value; }
+}
+function _selNew(key){ const box=document.getElementById('cf_'+key+'_new'); const hid=document.getElementById('cf_'+key); if(hid&&box) hid.value=(box.value||'').trim(); }
+function _catSelApply(key){
+  const sel=document.getElementById('cf_'+key+'_sel'); if(!sel) return;
+  const hid=document.getElementById('cf_'+key); const box=document.getElementById('cf_'+key+'_new');
+  const val=(hid&&hid.value)||'';
+  const has=[...sel.options].some(o=>o.value===val && o.value!=='__other__' && o.value!=='');
+  if(val && !has){ sel.value='__other__'; if(box){ box.style.display='block'; box.value=val; } }
+  else { sel.value=val; if(box){ box.style.display='none'; box.value=''; } }
+}
+function _syncCatSelects(){
+  document.querySelectorAll('#catSpecificFields select[id$="_sel"]').forEach(sel=>{
+    const key=sel.id.replace(/^cf_/,'').replace(/_sel$/,''); _catSelApply(key);
+  });
+}
 function restoreCatFields(item){
   if(!item.catFieldVals){_mselSync();return;}
-  Object.entries(item.catFieldVals).forEach(([k,v])=>{const el=document.getElementById('cf_'+k);if(el)el.value=v||'';});
+  Object.entries(item.catFieldVals).forEach(([k,v])=>{
+    const hid=document.getElementById('cf_'+k); if(hid) hid.value=v||'';
+    if(document.getElementById('cf_'+k+'_sel')) _catSelApply(k);
+  });
   _mselSync();
 }
 function _mselToggle(key, ev){
@@ -7524,10 +7563,17 @@ function refreshCategoryOptions(){
 function persistCustomCats(){
   try{ localStorage.setItem('hoardrCustomCats',JSON.stringify(customCats)); }catch(e){}
   try{ localStorage.setItem('hoardrCatRenames',JSON.stringify(catRenames)); }catch(e){}
+  try{ localStorage.setItem('hoardrCatOpts',JSON.stringify(catOpts)); }catch(e){}
   if(firebaseMode && currentUser){
-    firestoreDb.doc(`${userPath()}/settings/prefs`).set({customCats,catRenames},{merge:true})
+    firestoreDb.doc(`${userPath()}/settings/prefs`).set({customCats,catRenames,catOpts},{merge:true})
       .catch(e=>console.warn('customCats save failed:',e));
   }
+}
+function rememberCatOpt(key,val){
+  val=(val||'').trim(); if(!key||!val) return;
+  if(!catOpts[key]) catOpts[key]=[];
+  if(catOpts[key].some(o=>String(o).toLowerCase()===val.toLowerCase())) return;
+  catOpts[key].push(val); persistCustomCats();
 }
 function sortCustomCats(){ customCats.sort((a,b)=>String(a&&a.name?a.name:a).localeCompare(String(b&&b.name?b.name:b))); }
 function normCustomCats(){
@@ -7546,6 +7592,7 @@ function rememberCustomCat(name,emoji){
 function loadCustomCats(){
   try{ const raw=localStorage.getItem('hoardrCustomCats'); if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)) customCats=a; } }catch(e){}
   try{ const rr=localStorage.getItem('hoardrCatRenames'); if(rr){ const o=JSON.parse(rr); if(o&&typeof o==='object') catRenames=o; } }catch(e){}
+  try{ const co=localStorage.getItem('hoardrCatOpts'); if(co){ const o=JSON.parse(co); if(o&&typeof o==='object') catOpts=o; } }catch(e){}
   normCustomCats(); applyCatRenameFields(); refreshCategoryOptions();
 }
 
