@@ -1,0 +1,904 @@
+{
+ "version": "1.0.0",
+ "updated": "2026-11",
+ "note": "General diecast reference for Hoardr. The brands layer grounds scale, tier and typical value for any diecast item; notable is a short set of collector highlights. Values are indicative and vary by condition, box and market; the real measure is recent comparable sales.",
+ "brands": [
+  {
+   "name": "Dinky Toys",
+   "country": "UK",
+   "era": "1934 to 1979 (reissues since)",
+   "scales": [
+    "1:43",
+    "1:48"
+   ],
+   "tier": "mid to premium (vintage)",
+   "typical": "A$40 to A$600, pre-war and rare Supertoys into the thousands",
+   "ranges": [
+    "Dinky",
+    "Supertoys"
+   ],
+   "notes": "The original mass diecast car. Pre-war and 1950s Supertoys most valuable; watch for zinc pest in pre-1960 castings.",
+   "aliases": [
+    "Meccano Dinky"
+   ]
+  },
+  {
+   "name": "Corgi Toys",
+   "country": "UK",
+   "era": "1956 to present",
+   "scales": [
+    "1:43",
+    "1:36",
+    "1:50"
+   ],
+   "tier": "mid to premium (vintage)",
+   "typical": "A$30 to A$500, film and TV tie-ins into the thousands",
+   "ranges": [
+    "Corgi",
+    "Corgi Classics",
+    "Vanguards",
+    "Aviation Archive"
+   ],
+   "notes": "The ones with windows. James Bond and Batman film cars are the most collectible; boxed originals command a premium.",
+   "aliases": [
+    "Mettoy Corgi"
+   ]
+  },
+  {
+   "name": "Matchbox",
+   "country": "UK",
+   "era": "1953 to present (Mattel since 1997)",
+   "scales": [
+    "1:64",
+    "varies (1-75 range)"
+   ],
+   "tier": "budget, vintage collectible",
+   "typical": "A$5 to A$60, rare Lesney regular-wheels variants into the hundreds or thousands",
+   "ranges": [
+    "1-75",
+    "Models of Yesteryear",
+    "Superfast",
+    "Kingsize"
+   ],
+   "notes": "Lesney regular-wheels era (1953 to 1969) is the collector sweet spot; Superfast from 1969. Colour variants and boxes drive value.",
+   "aliases": [
+    "Lesney",
+    "Matchbox Lesney"
+   ]
+  },
+  {
+   "name": "Oxford Diecast",
+   "country": "UK",
+   "era": "1993 to present",
+   "scales": [
+    "1:76",
+    "1:43",
+    "1:148",
+    "1:72"
+   ],
+   "tier": "budget to mid",
+   "typical": "A$15 to A$60",
+   "ranges": [
+    "Oxford Automobile",
+    "Oxford Military",
+    "Oxford Rail"
+   ],
+   "notes": "Detailed British outline models; 1:76 (OO) suits model railways.",
+   "aliases": []
+  },
+  {
+   "name": "Lledo",
+   "country": "UK",
+   "era": "1983 to 1999",
+   "scales": [
+    "1:60"
+   ],
+   "tier": "budget",
+   "typical": "A$10 to A$40",
+   "ranges": [
+    "Days Gone"
+   ],
+   "notes": "Nostalgic vintage commercials and promotionals.",
+   "aliases": [
+    "Days Gone"
+   ]
+  },
+  {
+   "name": "Spot-On",
+   "country": "UK",
+   "era": "1959 to 1967",
+   "scales": [
+    "1:42"
+   ],
+   "tier": "collectible niche",
+   "typical": "A$60 to A$400",
+   "ranges": [],
+   "notes": "Tri-ang's constant-scale British range; scarce and sought after.",
+   "aliases": [
+    "Triang Spot-On"
+   ]
+  },
+  {
+   "name": "Amalgam",
+   "country": "UK",
+   "era": "1995 to present",
+   "scales": [
+    "1:8",
+    "1:18"
+   ],
+   "tier": "ultra premium (bespoke)",
+   "typical": "A$1,500 to A$20,000+",
+   "ranges": [],
+   "notes": "Hand-built museum-grade replicas, often licensed by manufacturers.",
+   "aliases": []
+  },
+  {
+   "name": "Hot Wheels",
+   "country": "USA",
+   "era": "1968 to present",
+   "scales": [
+    "1:64",
+    "1:18",
+    "1:43"
+   ],
+   "tier": "budget, with premium collector lines",
+   "typical": "A$3 to A$30 mainline; Redlines, Treasure Hunts and RLC into the hundreds or thousands",
+   "ranges": [
+    "Mainline",
+    "Redline",
+    "Treasure Hunt",
+    "Red Line Club (RLC)",
+    "Car Culture",
+    "Elite 1:18"
+   ],
+   "notes": "Best-selling toy car. Redline era (1968 to 1977), chase cars and error casts are the collectible end; the Beach Bomb prototype is the grail.",
+   "aliases": [
+    "Mattel Hot Wheels"
+   ]
+  },
+  {
+   "name": "Greenlight",
+   "country": "USA",
+   "era": "2002 to present",
+   "scales": [
+    "1:64",
+    "1:43",
+    "1:18",
+    "1:24"
+   ],
+   "tier": "mid, collector",
+   "typical": "A$10 to A$120",
+   "ranges": [
+    "Hollywood",
+    "Hobby Exclusive",
+    "Running on Empty",
+    "Artisan"
+   ],
+   "notes": "Licensed TV and film replicas plus limited editions with strong pop-culture appeal.",
+   "aliases": []
+  },
+  {
+   "name": "Johnny Lightning",
+   "country": "USA",
+   "era": "1969 to present",
+   "scales": [
+    "1:64"
+   ],
+   "tier": "budget to collector",
+   "typical": "A$8 to A$50",
+   "ranges": [
+    "Classic Gold",
+    "Muscle Cars",
+    "Street Freaks"
+   ],
+   "notes": "Hot Wheels rival; vintage Topper-era and limited runs collected.",
+   "aliases": []
+  },
+  {
+   "name": "Ertl",
+   "country": "USA",
+   "era": "1945 to present",
+   "scales": [
+    "1:64",
+    "1:43",
+    "1:16",
+    "1:18"
+   ],
+   "tier": "budget to mid",
+   "typical": "A$15 to A$150",
+   "ranges": [
+    "American Muscle",
+    "Farm (1:16)"
+   ],
+   "notes": "Strong in farm and agriculture diecast; 1:16 tractors are a collector niche.",
+   "aliases": []
+  },
+  {
+   "name": "Franklin Mint",
+   "country": "USA",
+   "era": "1980s to 2000s",
+   "scales": [
+    "1:24",
+    "1:43"
+   ],
+   "tier": "premium (vintage)",
+   "typical": "A$80 to A$500",
+   "ranges": [],
+   "notes": "Mail-order high-detail diecast; values depend on model and completeness of paperwork.",
+   "aliases": [
+    "Danbury Mint"
+   ]
+  },
+  {
+   "name": "Jada Toys",
+   "country": "USA",
+   "era": "2000 to present",
+   "scales": [
+    "1:24",
+    "1:32",
+    "1:64"
+   ],
+   "tier": "budget to mid",
+   "typical": "A$15 to A$80",
+   "ranges": [
+    "Fast & Furious",
+    "Hollywood Rides",
+    "Bigtime Muscle"
+   ],
+   "notes": "Pop-culture licensed cars, strongest on Fast & Furious.",
+   "aliases": []
+  },
+  {
+   "name": "M2 Machines",
+   "country": "USA",
+   "era": "2010 to present",
+   "scales": [
+    "1:64"
+   ],
+   "tier": "collector",
+   "typical": "A$10 to A$60, chases higher",
+   "ranges": [
+    "Auto-Thentics",
+    "Ground Pounders"
+   ],
+   "notes": "Detailed American classics in 1:64 with chase variants.",
+   "aliases": []
+  },
+  {
+   "name": "First Gear",
+   "country": "USA",
+   "era": "1990s to present",
+   "scales": [
+    "1:34",
+    "1:50"
+   ],
+   "tier": "mid, commercial",
+   "typical": "A$40 to A$200",
+   "ranges": [],
+   "notes": "Trucks and commercials; overlaps the construction and haulage niche.",
+   "aliases": []
+  },
+  {
+   "name": "Tomica",
+   "country": "Japan",
+   "era": "1970 to present",
+   "scales": [
+    "1:64 (varies)"
+   ],
+   "tier": "budget; premium TLV line",
+   "typical": "A$5 to A$25 mainline; Tomica Limited Vintage A$30 to A$150",
+   "ranges": [
+    "Tomica",
+    "Tomica Limited Vintage (TLV)",
+    "Tomica Premium"
+   ],
+   "notes": "Japan's everyday small-scale brand; TLV is the collector-grade line.",
+   "aliases": [
+    "Takara Tomy",
+    "Tomica Limited Vintage",
+    "TLV"
+   ]
+  },
+  {
+   "name": "Kyosho",
+   "country": "Japan",
+   "era": "1:18 and 1:43 diecast since 1990s",
+   "scales": [
+    "1:18",
+    "1:43",
+    "1:64"
+   ],
+   "tier": "premium",
+   "typical": "A$80 to A$400",
+   "ranges": [
+    "Kyosho Hi-End"
+   ],
+   "notes": "Meticulous Japanese and European sports cars; serious collector brand.",
+   "aliases": []
+  },
+  {
+   "name": "AUTOart",
+   "country": "Hong Kong",
+   "era": "1998 to present",
+   "scales": [
+    "1:18",
+    "1:12",
+    "1:43"
+   ],
+   "tier": "premium",
+   "typical": "A$150 to A$600",
+   "ranges": [
+    "Signature",
+    "Millennium",
+    "Composite"
+   ],
+   "notes": "Among the most detailed 1:18 diecast; opening everything, fine interiors.",
+   "aliases": [
+    "AUTOart Signature"
+   ]
+  },
+  {
+   "name": "Ebbro",
+   "country": "Japan",
+   "era": "1999 to present",
+   "scales": [
+    "1:43",
+    "1:24"
+   ],
+   "tier": "collector",
+   "typical": "A$40 to A$150",
+   "ranges": [],
+   "notes": "Japanese road and racing subjects often overlooked elsewhere.",
+   "aliases": []
+  },
+  {
+   "name": "Mini GT",
+   "country": "Japan / TSM",
+   "era": "2017 to present",
+   "scales": [
+    "1:64"
+   ],
+   "tier": "collector",
+   "typical": "A$15 to A$40",
+   "ranges": [
+    "Mini GT",
+    "LB Works"
+   ],
+   "notes": "Premium 1:64 by TSM; strong on JDM and tuner subjects.",
+   "aliases": [
+    "TSM Mini GT"
+   ]
+  },
+  {
+   "name": "Diapet",
+   "country": "Japan",
+   "era": "1960s to present",
+   "scales": [
+    "1:40",
+    "1:43"
+   ],
+   "tier": "vintage collectible",
+   "typical": "A$30 to A$200",
+   "ranges": [],
+   "notes": "Yonezawa's long-running Japanese range; vintage examples collected.",
+   "aliases": [
+    "Yonezawa Diapet"
+   ]
+  },
+  {
+   "name": "Siku",
+   "country": "Germany",
+   "era": "1950s to present",
+   "scales": [
+    "1:50",
+    "1:64",
+    "1:32 (farm)"
+   ],
+   "tier": "budget to mid",
+   "typical": "A$8 to A$120",
+   "ranges": [
+    "Siku Super",
+    "Siku Farmer (1:32)",
+    "Siku Control"
+   ],
+   "notes": "German everyday cars and commercials; 1:32 Siku Farmer is a big agriculture niche.",
+   "aliases": []
+  },
+  {
+   "name": "Minichamps",
+   "country": "Germany",
+   "era": "1990 to present",
+   "scales": [
+    "1:43",
+    "1:18",
+    "1:12"
+   ],
+   "tier": "premium",
+   "typical": "A$80 to A$400",
+   "ranges": [
+    "Minichamps",
+    "Maxichamps (budget)"
+   ],
+   "notes": "Paul's Model Art; vast road and motorsport catalogue, often limited numbered runs.",
+   "aliases": [
+    "Paul's Model Art",
+    "PMA"
+   ]
+  },
+  {
+   "name": "Schuco",
+   "country": "Germany",
+   "era": "1912 to present",
+   "scales": [
+    "1:43",
+    "1:18",
+    "1:87"
+   ],
+   "tier": "mid to premium",
+   "typical": "A$40 to A$300",
+   "ranges": [
+    "Schuco Classic",
+    "Piccolo"
+   ],
+   "notes": "Historic German maker; classic cars and the tiny Piccolo range.",
+   "aliases": []
+  },
+  {
+   "name": "CMC",
+   "country": "Germany",
+   "era": "1995 to present",
+   "scales": [
+    "1:18",
+    "1:12",
+    "1:24"
+   ],
+   "tier": "ultra premium",
+   "typical": "A$400 to A$2,000+",
+   "ranges": [],
+   "notes": "Museum-grade classic and racing models with hundreds of parts.",
+   "aliases": [
+    "CMC Classic Model Cars"
+   ]
+  },
+  {
+   "name": "NZG",
+   "country": "Germany",
+   "era": "1968 to present",
+   "scales": [
+    "1:50"
+   ],
+   "tier": "premium, commercial",
+   "typical": "A$60 to A$300",
+   "ranges": [],
+   "notes": "Construction, crane and commercial models; overlaps the mining and plant niche.",
+   "aliases": []
+  },
+  {
+   "name": "Conrad",
+   "country": "Germany",
+   "era": "1956 to present",
+   "scales": [
+    "1:50"
+   ],
+   "tier": "premium, commercial",
+   "typical": "A$60 to A$300",
+   "ranges": [],
+   "notes": "Construction and commercial vehicles in 1:50.",
+   "aliases": []
+  },
+  {
+   "name": "Schabak",
+   "country": "Germany",
+   "era": "1980s to 1990s",
+   "scales": [
+    "1:43",
+    "1:24"
+   ],
+   "tier": "mid (vintage)",
+   "typical": "A$20 to A$120",
+   "ranges": [],
+   "notes": "German promotionals, often VW and Porsche.",
+   "aliases": []
+  },
+  {
+   "name": "Norev",
+   "country": "France",
+   "era": "1953 to present",
+   "scales": [
+    "1:43",
+    "1:18",
+    "1:64"
+   ],
+   "tier": "mid",
+   "typical": "A$20 to A$150",
+   "ranges": [
+    "Jet-Car",
+    "Norev Retro"
+   ],
+   "notes": "French classics and everyday European cars; good value detail.",
+   "aliases": []
+  },
+  {
+   "name": "Solido",
+   "country": "France",
+   "era": "1932 to present",
+   "scales": [
+    "1:43",
+    "1:18"
+   ],
+   "tier": "mid",
+   "typical": "A$20 to A$150",
+   "ranges": [
+    "Solido",
+    "Yesterday"
+   ],
+   "notes": "Long-running French maker; classics and military.",
+   "aliases": []
+  },
+  {
+   "name": "Majorette",
+   "country": "France",
+   "era": "1961 to present",
+   "scales": [
+    "1:64 (varies)"
+   ],
+   "tier": "budget",
+   "typical": "A$5 to A$30",
+   "ranges": [
+    "Majorette 200",
+    "Deluxe"
+   ],
+   "notes": "France's everyday small-scale brand; vintage France-made examples collected.",
+   "aliases": []
+  },
+  {
+   "name": "Spark",
+   "country": "France",
+   "era": "2005 to present",
+   "scales": [
+    "1:43",
+    "1:18",
+    "1:64"
+   ],
+   "tier": "premium (resin)",
+   "typical": "A$80 to A$300",
+   "ranges": [],
+   "notes": "Resin, not diecast; motorsport and limited editions in fine detail.",
+   "aliases": []
+  },
+  {
+   "name": "Eligor",
+   "country": "France",
+   "era": "1970s to present",
+   "scales": [
+    "1:43"
+   ],
+   "tier": "mid",
+   "typical": "A$20 to A$120",
+   "ranges": [],
+   "notes": "French classics and commercials.",
+   "aliases": []
+  },
+  {
+   "name": "Bburago",
+   "country": "Italy",
+   "era": "1974 to present",
+   "scales": [
+    "1:18",
+    "1:24",
+    "1:43"
+   ],
+   "tier": "budget to mid",
+   "typical": "A$20 to A$80",
+   "ranges": [
+    "Race & Play",
+    "Signature"
+   ],
+   "notes": "Affordable entry into 1:18; Ferrari licence is a mainstay.",
+   "aliases": [
+    "Burago"
+   ]
+  },
+  {
+   "name": "BBR",
+   "country": "Italy",
+   "era": "1990 to present",
+   "scales": [
+    "1:18",
+    "1:43"
+   ],
+   "tier": "premium (resin)",
+   "typical": "A$150 to A$800",
+   "ranges": [],
+   "notes": "High-end resin Ferraris and supercars, limited numbered.",
+   "aliases": [
+    "BBR Models"
+   ]
+  },
+  {
+   "name": "Looksmart",
+   "country": "Italy",
+   "era": "2006 to present",
+   "scales": [
+    "1:43",
+    "1:18"
+   ],
+   "tier": "premium (resin)",
+   "typical": "A$120 to A$600",
+   "ranges": [],
+   "notes": "Hand-built resin, strong on Ferrari and modern supercars.",
+   "aliases": []
+  },
+  {
+   "name": "Polistil",
+   "country": "Italy",
+   "era": "1960s to 1990s",
+   "scales": [
+    "1:16",
+    "1:25",
+    "1:43"
+   ],
+   "tier": "vintage collectible",
+   "typical": "A$20 to A$150",
+   "ranges": [],
+   "notes": "Italian vintage ranges in several scales.",
+   "aliases": []
+  },
+  {
+   "name": "GT Spirit",
+   "country": "China / Europe",
+   "era": "2010s to present",
+   "scales": [
+    "1:18"
+   ],
+   "tier": "premium (resin, sealed)",
+   "typical": "A$120 to A$300",
+   "ranges": [
+    "Ottomobile"
+   ],
+   "notes": "Sealed-body resin 1:18 in limited numbered runs; no opening parts.",
+   "aliases": [
+    "Ottomobile",
+    "Otto Mobile"
+   ]
+  },
+  {
+   "name": "TrueScale (TSM)",
+   "country": "Hong Kong",
+   "era": "2000s to present",
+   "scales": [
+    "1:43",
+    "1:18",
+    "1:64"
+   ],
+   "tier": "premium",
+   "typical": "A$60 to A$250",
+   "ranges": [
+    "TSM-Model",
+    "Mini GT"
+   ],
+   "notes": "Collector resin and diecast; parent of Mini GT.",
+   "aliases": [
+    "TSM",
+    "TSM-Model"
+   ]
+  },
+  {
+   "name": "WSI Models",
+   "country": "Netherlands",
+   "era": "2000s to present",
+   "scales": [
+    "1:50"
+   ],
+   "tier": "premium, commercial",
+   "typical": "A$80 to A$300",
+   "ranges": [],
+   "notes": "Trucks, cranes and plant in 1:50; overlaps the construction and haulage niche.",
+   "aliases": []
+  },
+  {
+   "name": "Universal Hobbies",
+   "country": "UK / France",
+   "era": "1990s to present",
+   "scales": [
+    "1:32",
+    "1:43",
+    "1:50"
+   ],
+   "tier": "mid, farm and plant",
+   "typical": "A$40 to A$200",
+   "ranges": [],
+   "notes": "Agriculture (1:32) and construction; licensed tractor ranges.",
+   "aliases": [
+    "UH"
+   ]
+  },
+  {
+   "name": "Diecast Masters",
+   "country": "USA / China",
+   "era": "2016 to present",
+   "scales": [
+    "1:50",
+    "1:24",
+    "1:87"
+   ],
+   "tier": "premium, construction",
+   "typical": "A$60 to A$300",
+   "ranges": [
+    "Core Classics",
+    "High Line"
+   ],
+   "notes": "Official Caterpillar licensee (took over from Norscot); the construction and mining mainstay.",
+   "aliases": [
+    "DM"
+   ]
+  },
+  {
+   "name": "Norscot",
+   "country": "USA",
+   "era": "2000s to 2016",
+   "scales": [
+    "1:50"
+   ],
+   "tier": "mid, construction",
+   "typical": "A$40 to A$200",
+   "ranges": [],
+   "notes": "Former Caterpillar licensee before Diecast Masters; collected secondhand.",
+   "aliases": []
+  }
+ ],
+ "notable": [
+  {
+   "modelName": "Hot Wheels 'Beach Bomb' rear-loader prototype",
+   "maker": "Hot Wheels",
+   "realMake": "Volkswagen",
+   "realModel": "Type 2 Bus",
+   "type": "van",
+   "scale": "1:64",
+   "year": 1969,
+   "value": {
+    "low": 70000,
+    "high": 175000,
+    "currency": "USD",
+    "asOf": "historical"
+   },
+   "why": "The rear-loading prototype is the most valuable production-era Hot Wheels, a handful known.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  },
+  {
+   "modelName": "Corgi gold-plated James Bond Lotus Esprit (presentation)",
+   "maker": "Corgi",
+   "realMake": "Lotus",
+   "realModel": "Esprit",
+   "type": "car",
+   "scale": "1:36",
+   "year": 1977,
+   "value": {
+    "low": 9818,
+    "high": 9818,
+    "currency": "GBP",
+    "asOf": "2006 Christie's"
+   },
+   "why": "One-off gold-plated presentation piece; standard versions are far less.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  },
+  {
+   "modelName": "Hot Wheels Redline Custom Mustang",
+   "maker": "Hot Wheels",
+   "realMake": "Ford",
+   "realModel": "Mustang",
+   "type": "car",
+   "scale": "1:64",
+   "year": 1968,
+   "value": {
+    "low": 500,
+    "high": 2500,
+    "currency": "USD",
+    "asOf": "historical"
+   },
+   "why": "First-year Redline; rare colours and a no-paint example have sold in the thousands.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  },
+  {
+   "modelName": "Corgi 261 James Bond Aston Martin DB5",
+   "maker": "Corgi",
+   "realMake": "Aston Martin",
+   "realModel": "DB5",
+   "type": "car",
+   "scale": "1:43",
+   "year": 1965,
+   "value": {
+    "low": 150,
+    "high": 800,
+    "currency": "AUD",
+    "asOf": "indicative"
+   },
+   "why": "The original Bond car with ejector seat; boxed with figures most valuable.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  },
+  {
+   "modelName": "Dinky Supertoys Guy 'Heinz' Van",
+   "maker": "Dinky",
+   "realMake": "Guy",
+   "realModel": "Warrior",
+   "type": "van",
+   "scale": "1:48",
+   "year": 1960,
+   "value": {
+    "low": 500,
+    "high": 1500,
+    "currency": "GBP",
+    "asOf": "historical"
+   },
+   "why": "Sought-after advertising livery; a boxed example made GBP 1,100 at auction.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  },
+  {
+   "modelName": "Matchbox Magirus-Deutz crane truck (No.30)",
+   "maker": "Matchbox",
+   "realMake": "Magirus-Deutz",
+   "realModel": "Crane",
+   "type": "crane truck",
+   "scale": "1:64",
+   "year": 1961,
+   "value": {
+    "low": 50,
+    "high": 2000,
+    "currency": "USD",
+    "asOf": "indicative"
+   },
+   "why": "Lesney regular-wheels crane; rare colour variants command strong premiums.",
+   "sources": [
+    "https://www.jacquelinestallone.com/most-valuable-matchbox-cars/"
+   ]
+  },
+  {
+   "modelName": "Dinky pre-war streamlined racing car (No.23b)",
+   "maker": "Dinky",
+   "realMake": "(generic)",
+   "realModel": "Racing car",
+   "type": "car",
+   "scale": "1:43",
+   "year": 1936,
+   "value": {
+    "low": 150,
+    "high": 1500,
+    "currency": "AUD",
+    "asOf": "indicative"
+   },
+   "why": "Pre-war Dinky; condition and absence of zinc pest are everything.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  },
+  {
+   "modelName": "Corgi 267 Batmobile",
+   "maker": "Corgi",
+   "realMake": "(custom)",
+   "realModel": "Batmobile",
+   "type": "car",
+   "scale": "1:43",
+   "year": 1966,
+   "value": {
+    "low": 120,
+    "high": 700,
+    "currency": "AUD",
+    "asOf": "indicative"
+   },
+   "why": "Film and TV tie-in; boxed with figures and accessories most valuable.",
+   "sources": [
+    "https://www.invaluable.com/blog/diecast-cars/"
+   ]
+  }
+ ]
+}
